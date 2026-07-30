@@ -11,6 +11,14 @@ App de gestión financiera personal automatizada. En vez de categorizar gastos a
 
 **Límite legal:** Kubo solo calcula cifras de reparto. Nunca recomienda activos/productos concretos ni asume rentabilidades de inversión — eso es asesoramiento financiero regulado y queda fuera de alcance del proyecto.
 
+## Diferencia con Fintonic y apps similares
+
+Apps como Fintonic, YNAB o Money Lover funcionan **a posteriori**: te conectas las cuentas, gastas con normalidad, y la app **categoriza** cada movimiento que ya ocurrió ("esto es ocio", "esto es comida") para darte estadísticas de en qué se te fue el dinero. Es una fotografía del pasado — no decide nada por ti, tú sigues gastando libremente y luego revisas.
+
+Kubo funciona **a priori**, en el momento en que entra el ingreso: en vez de dejar que el dinero se gaste libremente y clasificar el rastro después, reparte automáticamente el ingreso mensual completo en el momento en que llega, siguiendo la cascada de prioridad fija de arriba. No dice "en qué gastaste", dice "esto es lo que le toca a cada cubo este mes", antes de que se pueda gastar.
+
+Dicho de otra forma: Fintonic es un espejo retrovisor (categorización descriptiva), Kubo es un motor de reglas prescriptivo (asignación automática por prioridad).
+
 ## Stack
 
 - Backend: Python 3.12 + FastAPI + Pydantic v2 + SQLAlchemy 2.0 + Alembic
