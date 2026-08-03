@@ -28,6 +28,28 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+def get_balances(db: Session) -> dict[str, int]:
+    """Saldo actual de cada bucket: suma de todos sus movimientos hasta ahora."""
+    filas = (
+        db.query(LedgerEntryModel.bucket_id, func.sum(LedgerEntryModel.amount_cents))
+        .group_by(LedgerEntryModel.bucket_id)
+        .all()
+    )
+    return {bucket_id: total for bucket_id, total in filas}
+
+
+def to_bucket_read(bucket: BucketModel, balances: dict[str, int]) -> BucketRead:
+    return BucketRead(
+        id=bucket.id,
+        name=bucket.name,
+        strategy=bucket.strategy,
+        priority=bucket.priority,
+        target_cents=bucket.target_cents,
+        fixed_amount_cents=bucket.fixed_amount_cents,
+        balance_cents=balances.get(bucket.id, 0),
+    )
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Endpoint mínimo para comprobar que la API está viva."""
@@ -35,17 +57,19 @@ def health() -> dict[str, str]:
 
 
 @app.post("/buckets", response_model=BucketRead)
-def crear_bucket(bucket: BucketCreate, db: Session = Depends(get_db)) -> BucketModel:
+def crear_bucket(bucket: BucketCreate, db: Session = Depends(get_db)) -> BucketRead:
     nuevo = BucketModel(**bucket.model_dump())
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
-    return nuevo
+    return to_bucket_read(nuevo, balances={})  # bucket recién creado: saldo 0
 
 
 @app.get("/buckets", response_model=list[BucketRead])
-def listar_buckets(db: Session = Depends(get_db)) -> list[BucketModel]:
-    return db.query(BucketModel).order_by(BucketModel.priority).all()
+def listar_buckets(db: Session = Depends(get_db)) -> list[BucketRead]:
+    buckets = db.query(BucketModel).order_by(BucketModel.priority).all()
+    balances = get_balances(db)
+    return [to_bucket_read(b, balances) for b in buckets]
 
 
 @app.post("/allocate", response_model=AllocationResultRead)
@@ -68,13 +92,7 @@ def ejecutar_reparto(
         for b in bucket_models
     ]
 
-    # Saldo actual de cada bucket = suma de todos sus movimientos hasta ahora.
-    filas_saldo = (
-        db.query(LedgerEntryModel.bucket_id, func.sum(LedgerEntryModel.amount_cents))
-        .group_by(LedgerEntryModel.bucket_id)
-        .all()
-    )
-    current_balances = {bucket_id: total for bucket_id, total in filas_saldo}
+    current_balances = get_balances(db)
 
     resultado = allocate(
         income_cents=request.income_cents,

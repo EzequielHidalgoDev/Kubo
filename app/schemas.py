@@ -21,6 +21,7 @@ class BucketRead(BaseModel):
     priority: int
     target_cents: int | None
     fixed_amount_cents: int | None
+    balance_cents: int  # suma de ledger_entries para este bucket; no viene de BucketModel
 
     # Permite crear un BucketRead directamente a partir de un BucketModel
     # (objeto de SQLAlchemy), sin convertirlo a dict a mano.
