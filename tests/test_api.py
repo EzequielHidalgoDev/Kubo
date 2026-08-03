@@ -4,6 +4,20 @@ def test_health(client):
     assert respuesta.json() == {"status": "ok"}
 
 
+def test_crear_bucket_fixed_sin_importe_devuelve_400(client):
+    respuesta = client.post(
+        "/buckets",
+        json={
+            "id": "malo",
+            "name": "Bucket malo",
+            "strategy": "FIXED",
+            "priority": 9,
+        },
+    )
+    assert respuesta.status_code == 400
+    assert "fixed_amount_cents" in respuesta.json()["detail"]
+
+
 def test_crear_y_listar_bucket(client):
     respuesta_crear = client.post(
         "/buckets",

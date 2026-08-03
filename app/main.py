@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -58,6 +58,21 @@ def health() -> dict[str, str]:
 
 @app.post("/buckets", response_model=BucketRead)
 def crear_bucket(bucket: BucketCreate, db: Session = Depends(get_db)) -> BucketRead:
+    # Reutilizamos la validación de motor.models.Bucket (misma regla que en
+    # Fase 0: cada estrategia necesita su dato correspondiente). No guardamos
+    # este objeto, solo lo usamos para que su __post_init__ valide por nosotros.
+    try:
+        Bucket(
+            id=bucket.id,
+            name=bucket.name,
+            strategy=BucketStrategy(bucket.strategy),
+            priority=bucket.priority,
+            target_cents=bucket.target_cents,
+            fixed_amount_cents=bucket.fixed_amount_cents,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
     nuevo = BucketModel(**bucket.model_dump())
     db.add(nuevo)
     db.commit()
