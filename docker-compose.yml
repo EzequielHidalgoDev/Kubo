@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kubo
+      POSTGRES_PASSWORD: kubo
+      POSTGRES_DB: kubo
+    ports:
+      - "5432:5432"
+    volumes:
+      - kubo_db_data:/var/lib/postgresql/data
+
+volumes:
+  kubo_db_data:
