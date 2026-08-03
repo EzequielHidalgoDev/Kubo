@@ -11,5 +11,19 @@ services:
     volumes:
       - kubo_db_data:/var/lib/postgresql/data
 
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      # "db" es el nombre del servicio de arriba, no localhost: dentro de la
+      # red de Docker Compose, los contenedores se encuentran por nombre.
+      DATABASE_URL: postgresql+psycopg://kubo:kubo@db:5432/kubo
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+
 volumes:
   kubo_db_data:

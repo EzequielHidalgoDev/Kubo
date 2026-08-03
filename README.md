@@ -100,13 +100,13 @@ Además, el ledger (registro de movimientos) es **append-only**: nunca se hace `
 ### Cómo levantar el entorno
 
 ```bash
-docker compose up -d          # levanta PostgreSQL en un contenedor
-python -m pip install -r requirements.txt
+docker compose up -d --build
 python -m alembic upgrade head    # aplica las migraciones (crea las tablas)
-python -m uvicorn app.main:app --reload
 ```
 
-La API queda disponible en `http://127.0.0.1:8000`, con documentación interactiva automática en `http://127.0.0.1:8000/docs`.
+`docker compose up` levanta dos contenedores: `db` (PostgreSQL) y `api` (la aplicación FastAPI, construida a partir del `Dockerfile`). La API queda disponible en `http://127.0.0.1:8000`, con documentación interactiva automática en `http://127.0.0.1:8000/docs`. El código se monta como volumen, así que los cambios se recargan solos sin reconstruir la imagen (solo hay que reconstruir con `--build` si cambian las dependencias en `requirements.txt`).
+
+Alembic se sigue ejecutando desde fuera del contenedor (con Python instalado en tu máquina) porque solo hace falta al cambiar el esquema de la base de datos, no en cada arranque.
 
 ### Conceptos usados
 
