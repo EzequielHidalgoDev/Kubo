@@ -25,3 +25,27 @@ class BucketRead(BaseModel):
     # Permite crear un BucketRead directamente a partir de un BucketModel
     # (objeto de SQLAlchemy), sin convertirlo a dict a mano.
     model_config = ConfigDict(from_attributes=True)
+
+
+class AllocateRequest(BaseModel):
+    """Lo que la API espera recibir para ejecutar un reparto."""
+
+    income_cents: int
+
+
+class BucketAllocationRead(BaseModel):
+    """Un resultado individual dentro de un reparto."""
+
+    bucket_id: str
+    amount_cents: int
+    reached_target: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AllocationResultRead(BaseModel):
+    """El desglose completo devuelto tras ejecutar un reparto."""
+
+    income_cents: int
+    allocations: list[BucketAllocationRead]
+    unallocated_cents: int

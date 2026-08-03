@@ -95,6 +95,49 @@ Además, el ledger (registro de movimientos) es **append-only**: nunca se hace `
 
 **`AllocationResult`** — resumen completo del reparto de un ingreso mensual entre todos los buckets. Usa `tuple` en vez de `list` para las allocations, para que el resultado sea completamente inmutable una vez calculado. `unallocated_cents` debería ser siempre `0`; si no lo es, hay un error en el cálculo.
 
+## API y base de datos (`app/`) — Fase 1
+
+### Cómo levantar el entorno
+
+```bash
+docker compose up -d          # levanta PostgreSQL en un contenedor
+python -m pip install -r requirements.txt
+python -m alembic upgrade head    # aplica las migraciones (crea las tablas)
+python -m uvicorn app.main:app --reload
+```
+
+La API queda disponible en `http://127.0.0.1:8000`, con documentación interactiva automática en `http://127.0.0.1:8000/docs`.
+
+### Conceptos usados
+
+**Docker / Docker Compose**: en vez de instalar PostgreSQL directamente en el sistema operativo, se levanta dentro de un contenedor (una copia aislada y desechable del programa). `docker-compose.yml` describe qué contenedores levantar (aquí, solo `db`) y con qué configuración.
+
+**FastAPI**: framework que expone la lógica como una API HTTP. Cada función decorada con `@app.get(...)` o `@app.post(...)` en `app/main.py` es un endpoint. Genera la documentación de `/docs` automáticamente a partir del propio código.
+
+**ORM (SQLAlchemy)**: traduce entre las tablas de Postgres y clases de Python. `app/models.py` define `BucketModel` y `LedgerEntryModel`, que son la representación en código de las tablas `buckets` y `ledger_entries`. El ORM no crea las tablas por sí solo: solo describe cómo deberían ser.
+
+**Alembic**: compara esa descripción (el ORM) contra lo que existe realmente en Postgres, y genera/aplica los scripts de migración (`alembic/versions/`) que crean o modifican las tablas. Es el paso intermedio entre "el código dice que debería haber esta tabla" y "la tabla existe de verdad en la base de datos".
+
+**Pydantic (esquemas de la API, `app/schemas.py`)**: los modelos ORM (`BucketModel`) no se exponen directamente en la API. Se definen esquemas Pydantic aparte (`BucketCreate`, `BucketRead`, ...) que validan lo que entra y controlan exactamente lo que se devuelve en JSON — separa la representación interna (base de datos) de la representación pública (API).
+
+### Tablas
+
+**`buckets`** — la configuración de cada bucket del usuario (mismos campos que `motor.models.Bucket`: `id`, `name`, `strategy`, `priority`, `target_cents`, `fixed_amount_cents`). Nota: la API todavía no valida que cada estrategia tenga el dato que necesita (esa validación sí existe en `motor.models.Bucket.__post_init__`, pero aún no se reutiliza aquí).
+
+**`ledger_entries`** — histórico **append-only** de movimientos: cada asignación de dinero a un bucket es una fila nueva, nunca se modifica una fila existente. El saldo actual de un bucket se calcula sumando todas sus filas (`SUM(amount_cents) WHERE bucket_id = ...`), en vez de guardar un campo "saldo" que se pueda sobrescribir. `bucket_id` es una **clave foránea** (`ForeignKey`) a `buckets.id`: Postgres impide crear un movimiento que apunte a un bucket inexistente.
+
+### Endpoints
+
+- `GET /health` — comprobación de que la API está viva.
+- `POST /buckets` / `GET /buckets` — crear y listar buckets.
+- `POST /allocate` — ejecuta un reparto real:
+  1. Lee los buckets guardados en `buckets`.
+  2. Calcula el saldo actual de cada uno sumando `ledger_entries`.
+  3. Convierte cada `BucketModel` (fila de la base de datos) a un `Bucket` del motor puro (`motor.models`), que no depende de la base de datos ni de FastAPI.
+  4. Llama a `motor.engine.allocate(...)` — la misma función ya probada con tests en Fase 0, reutilizada tal cual.
+  5. Guarda el resultado como nuevas filas en `ledger_entries` (solo los buckets que recibieron dinero > 0).
+  6. Devuelve el desglose completo (`AllocationResultRead`).
+
 ## Convenciones
 
 - Código (clases, funciones, variables): inglés.
