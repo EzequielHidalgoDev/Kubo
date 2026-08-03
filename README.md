@@ -28,6 +28,14 @@ Dicho de otra forma: Fintonic es un espejo retrovisor (categorización descripti
 - Infra dev: Docker Compose
 - CI/CD: GitHub Actions
 
+### Qué hace cada pieza del backend
+
+- **Python** — el lenguaje.
+- **FastAPI** — la API web, la "puerta de entrada" que recibe peticiones HTTP y devuelve respuestas en JSON.
+- **Pydantic** — valida que los datos que entran/salen de la API tengan la forma correcta.
+- **SQLAlchemy** — el ORM (Object-Relational Mapper): traduce entre tablas SQL y objetos Python, para no escribir SQL a mano (menos errores, evita inyección SQL).
+- **Alembic** — el "Git de la base de datos": versiona cada cambio de estructura (tablas, columnas) en scripts aplicables y reversibles, usando las clases de SQLAlchemy para detectar los cambios.
+
 ## Fases
 
 - **Fase 0 (actual):** motor de allocation puro en Python, sin DB/API/UI.
