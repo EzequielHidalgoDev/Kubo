@@ -11,3 +11,8 @@ venv/
 htmlcov/
 dist/
 build/
+
+# Nunca subir configuración de asistentes de IA
+.claude/
+CLAUDE.md
+AGENTS.md
