@@ -12,6 +12,7 @@ from app.schemas import (
     AllocationResultRead,
     BucketCreate,
     BucketRead,
+    BucketUpdate,
 )
 from motor.engine import allocate
 from motor.models import Bucket, BucketStrategy
@@ -99,6 +100,75 @@ def listar_buckets(
     )
     balances = get_balances(db, user_id)
     return [to_bucket_read(b, balances) for b in buckets]
+
+
+def get_bucket_o_404(db: Session, user_id: str, bucket_id: str) -> BucketModel:
+    bucket = (
+        db.query(BucketModel)
+        .filter(BucketModel.user_id == user_id, BucketModel.id == bucket_id)
+        .first()
+    )
+    if bucket is None:
+        raise HTTPException(status_code=404, detail="Bucket no encontrado")
+    return bucket
+
+
+@app.put("/buckets/{bucket_id}", response_model=BucketRead)
+def editar_bucket(
+    bucket_id: str,
+    datos: BucketUpdate,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+) -> BucketRead:
+    bucket = get_bucket_o_404(db, user_id, bucket_id)
+
+    # Misma validación que al crear: reutilizamos motor.models.Bucket.
+    try:
+        Bucket(
+            id=bucket_id,
+            name=datos.name,
+            strategy=BucketStrategy(datos.strategy),
+            priority=datos.priority,
+            target_cents=datos.target_cents,
+            fixed_amount_cents=datos.fixed_amount_cents,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    bucket.name = datos.name
+    bucket.strategy = datos.strategy
+    bucket.priority = datos.priority
+    bucket.target_cents = datos.target_cents
+    bucket.fixed_amount_cents = datos.fixed_amount_cents
+    db.commit()
+    db.refresh(bucket)
+
+    balances = get_balances(db, user_id)
+    return to_bucket_read(bucket, balances)
+
+
+@app.delete("/buckets/{bucket_id}", status_code=204)
+def borrar_bucket(
+    bucket_id: str,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+) -> None:
+    bucket = get_bucket_o_404(db, user_id, bucket_id)
+
+    tiene_historial = (
+        db.query(LedgerEntryModel)
+        .filter(LedgerEntryModel.user_id == user_id, LedgerEntryModel.bucket_id == bucket_id)
+        .first()
+        is not None
+    )
+    if tiene_historial:
+        raise HTTPException(
+            status_code=409,
+            detail="No se puede borrar: el bucket tiene movimientos en el historial",
+        )
+
+    db.delete(bucket)
+    db.commit()
 
 
 @app.post("/allocate", response_model=AllocationResultRead)

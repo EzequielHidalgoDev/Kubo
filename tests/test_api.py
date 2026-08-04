@@ -78,6 +78,79 @@ def test_crear_y_listar_bucket(client):
     assert ids == ["gastos_fijos"]
 
 
+def test_editar_bucket(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "colchon",
+            "name": "Colchón",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 3,
+            "target_cents": 400000,
+        },
+    )
+
+    respuesta = client.put(
+        "/buckets/colchon",
+        json={
+            "name": "Colchón de emergencia",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 2,
+            "target_cents": 500000,
+        },
+    )
+
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["name"] == "Colchón de emergencia"
+    assert datos["priority"] == 2
+    assert datos["target_cents"] == 500000
+
+
+def test_editar_bucket_inexistente_devuelve_404(client):
+    respuesta = client.put(
+        "/buckets/no_existe",
+        json={"name": "X", "strategy": "FIXED", "priority": 1, "fixed_amount_cents": 100},
+    )
+    assert respuesta.status_code == 404
+
+
+def test_borrar_bucket_sin_historial(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "mudanza",
+            "name": "Mudanza",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 2,
+            "target_cents": 80000,
+        },
+    )
+
+    respuesta = client.delete("/buckets/mudanza")
+    assert respuesta.status_code == 204
+
+    ids = [b["id"] for b in client.get("/buckets").json()]
+    assert "mudanza" not in ids
+
+
+def test_borrar_bucket_con_historial_devuelve_409(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "colchon",
+            "name": "Colchón",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 400000,
+        },
+    )
+    client.post("/allocate", json={"income_cents": 100000})  # genera historial
+
+    respuesta = client.delete("/buckets/colchon")
+    assert respuesta.status_code == 409
+
+
 def test_allocate_reparte_y_guarda_en_ledger(client):
     client.post(
         "/buckets",

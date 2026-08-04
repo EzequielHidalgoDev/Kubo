@@ -12,6 +12,17 @@ class BucketCreate(BaseModel):
     fixed_amount_cents: int | None = None
 
 
+class BucketUpdate(BaseModel):
+    """Lo que la API espera recibir para editar un bucket existente.
+    Sin 'id': el bucket a editar ya viene indicado en la URL."""
+
+    name: str
+    strategy: str
+    priority: int
+    target_cents: int | None = None
+    fixed_amount_cents: int | None = None
+
+
 class BucketRead(BaseModel):
     """Lo que la API devuelve al consultar un bucket."""
 
