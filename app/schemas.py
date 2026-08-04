@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BucketCreate(BaseModel):
@@ -42,7 +42,9 @@ class BucketRead(BaseModel):
 class AllocateRequest(BaseModel):
     """Lo que la API espera recibir para ejecutar un reparto."""
 
-    income_cents: int
+    # gt=0 -> Pydantic valida solo, sin código nuestro: rechaza automáticamente
+    # con un 422 cualquier valor 0 o negativo.
+    income_cents: int = Field(gt=0)
 
 
 class BucketAllocationRead(BaseModel):

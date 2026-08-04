@@ -10,6 +10,11 @@ def test_health(client):
     assert respuesta.json() == {"status": "ok"}
 
 
+def test_allocate_con_ingreso_negativo_devuelve_422(client):
+    respuesta = client.post("/allocate", json={"income_cents": -100})
+    assert respuesta.status_code == 422
+
+
 def test_sin_token_devuelve_401(db_session):
     # El fixture "client" ya viene con el usuario simulado; aquí lo evitamos
     # a propósito para comprobar qué pasa SIN autenticación.
