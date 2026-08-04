@@ -1,16 +1,19 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKeyConstraint, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
 
 
 class BucketModel(Base):
-    """Tabla 'buckets': la configuración de cada bucket del usuario."""
+    """Tabla 'buckets': la configuración de cada bucket de cada usuario."""
 
     __tablename__ = "buckets"
 
+    # Clave primaria compuesta (user_id, id): así dos usuarios distintos
+    # pueden tener cada uno un bucket con id="colchon" sin chocar entre sí.
+    user_id: Mapped[str] = mapped_column(String, primary_key=True)
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     strategy: Mapped[str] = mapped_column(String, nullable=False)
@@ -23,9 +26,17 @@ class LedgerEntryModel(Base):
     """Tabla 'ledger_entries': histórico append-only de movimientos por bucket."""
 
     __tablename__ = "ledger_entries"
+    __table_args__ = (
+        # La clave foránea también es compuesta, para apuntar al bucket
+        # correcto del usuario correcto (no basta con el id del bucket).
+        ForeignKeyConstraint(
+            ["user_id", "bucket_id"], ["buckets.user_id", "buckets.id"]
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    bucket_id: Mapped[str] = mapped_column(String, ForeignKey("buckets.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String, nullable=False)
+    bucket_id: Mapped[str] = mapped_column(String, nullable=False)
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     # server_default=func.now() -> la fecha la pone Postgres al insertar, no Python.
     created_at: Mapped[datetime] = mapped_column(

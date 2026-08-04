@@ -138,6 +138,20 @@ Alembic se sigue ejecutando desde fuera del contenedor (con Python instalado en 
   5. Guarda el resultado como nuevas filas en `ledger_entries` (solo los buckets que recibieron dinero > 0).
   6. Devuelve el desglose completo (`AllocationResultRead`).
 
+### Autenticación (Clerk)
+
+Todos los endpoints salvo `/health` requieren un token válido en la cabecera `Authorization: Bearer <token>`, emitido por [Clerk](https://clerk.com). La clave secreta (`CLERK_SECRET_KEY`) se guarda en `.env` (nunca en git) y se pasa también al contenedor `api` vía `docker-compose.yml`.
+
+`app/auth.py` define `get_current_user_id`, una dependencia de FastAPI que verifica el token de cada petición y devuelve el `id` del usuario autenticado (o corta con `401` si no hay token o no es válido). Cada endpoint la usa así:
+
+```python
+@app.get("/buckets")
+def listar_buckets(..., user_id: str = Depends(get_current_user_id)):
+    ...
+```
+
+**Multiusuario:** `buckets` tiene clave primaria compuesta `(user_id, id)` (dos usuarios distintos pueden tener cada uno un bucket con `id="colchon"` sin chocar), y `ledger_entries` guarda también su propio `user_id`. Todas las consultas filtran explícitamente por el `user_id` del token — un usuario nunca puede ver ni modificar los buckets de otro.
+
 ## Convenciones
 
 - Código (clases, funciones, variables): inglés.

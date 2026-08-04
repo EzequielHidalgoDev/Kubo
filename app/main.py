@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user_id
 from app.db import SessionLocal
 from app.models import BucketModel, LedgerEntryModel
 from app.schemas import (
@@ -28,10 +29,11 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def get_balances(db: Session) -> dict[str, int]:
-    """Saldo actual de cada bucket: suma de todos sus movimientos hasta ahora."""
+def get_balances(db: Session, user_id: str) -> dict[str, int]:
+    """Saldo actual de cada bucket del usuario: suma de sus movimientos."""
     filas = (
         db.query(LedgerEntryModel.bucket_id, func.sum(LedgerEntryModel.amount_cents))
+        .filter(LedgerEntryModel.user_id == user_id)
         .group_by(LedgerEntryModel.bucket_id)
         .all()
     )
@@ -52,12 +54,16 @@ def to_bucket_read(bucket: BucketModel, balances: dict[str, int]) -> BucketRead:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    """Endpoint mínimo para comprobar que la API está viva."""
+    """Endpoint mínimo para comprobar que la API está viva. No requiere login."""
     return {"status": "ok"}
 
 
 @app.post("/buckets", response_model=BucketRead)
-def crear_bucket(bucket: BucketCreate, db: Session = Depends(get_db)) -> BucketRead:
+def crear_bucket(
+    bucket: BucketCreate,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+) -> BucketRead:
     # Reutilizamos la validación de motor.models.Bucket (misma regla que en
     # Fase 0: cada estrategia necesita su dato correspondiente). No guardamos
     # este objeto, solo lo usamos para que su __post_init__ valide por nosotros.
@@ -73,7 +79,7 @@ def crear_bucket(bucket: BucketCreate, db: Session = Depends(get_db)) -> BucketR
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
-    nuevo = BucketModel(**bucket.model_dump())
+    nuevo = BucketModel(user_id=user_id, **bucket.model_dump())
     db.add(nuevo)
     db.commit()
     db.refresh(nuevo)
@@ -81,17 +87,27 @@ def crear_bucket(bucket: BucketCreate, db: Session = Depends(get_db)) -> BucketR
 
 
 @app.get("/buckets", response_model=list[BucketRead])
-def listar_buckets(db: Session = Depends(get_db)) -> list[BucketRead]:
-    buckets = db.query(BucketModel).order_by(BucketModel.priority).all()
-    balances = get_balances(db)
+def listar_buckets(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+) -> list[BucketRead]:
+    buckets = (
+        db.query(BucketModel)
+        .filter(BucketModel.user_id == user_id)
+        .order_by(BucketModel.priority)
+        .all()
+    )
+    balances = get_balances(db, user_id)
     return [to_bucket_read(b, balances) for b in buckets]
 
 
 @app.post("/allocate", response_model=AllocationResultRead)
 def ejecutar_reparto(
-    request: AllocateRequest, db: Session = Depends(get_db)
+    request: AllocateRequest,
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
 ) -> AllocationResultRead:
-    bucket_models = db.query(BucketModel).all()
+    bucket_models = db.query(BucketModel).filter(BucketModel.user_id == user_id).all()
 
     # Traducimos BucketModel (de la base de datos) a Bucket (del motor puro),
     # que no sabe nada de SQLAlchemy ni de Postgres.
@@ -107,7 +123,7 @@ def ejecutar_reparto(
         for b in bucket_models
     ]
 
-    current_balances = get_balances(db)
+    current_balances = get_balances(db, user_id)
 
     resultado = allocate(
         income_cents=request.income_cents,
@@ -120,6 +136,7 @@ def ejecutar_reparto(
         if a.amount_cents > 0:
             db.add(
                 LedgerEntryModel(
+                    user_id=user_id,
                     bucket_id=a.bucket_id,
                     amount_cents=a.amount_cents,
                     note="reparto automático",

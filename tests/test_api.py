@@ -1,7 +1,47 @@
+from fastapi.testclient import TestClient
+
+from app.auth import get_current_user_id
+from app.main import app, get_db
+
+
 def test_health(client):
     respuesta = client.get("/health")
     assert respuesta.status_code == 200
     assert respuesta.json() == {"status": "ok"}
+
+
+def test_sin_token_devuelve_401(db_session):
+    # El fixture "client" ya viene con el usuario simulado; aquí lo evitamos
+    # a propósito para comprobar qué pasa SIN autenticación.
+    app.dependency_overrides[get_db] = lambda: db_session
+    cliente_sin_auth = TestClient(app)
+
+    respuesta = cliente_sin_auth.get("/buckets")
+
+    assert respuesta.status_code == 401
+    app.dependency_overrides.clear()
+
+
+def test_buckets_aislados_entre_usuarios(db_session):
+    app.dependency_overrides[get_db] = lambda: db_session
+
+    app.dependency_overrides[get_current_user_id] = lambda: "usuario_a"
+    TestClient(app).post(
+        "/buckets",
+        json={
+            "id": "colchon",
+            "name": "Colchón de A",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 100000,
+        },
+    )
+
+    app.dependency_overrides[get_current_user_id] = lambda: "usuario_b"
+    respuesta_b = TestClient(app).get("/buckets")
+
+    assert respuesta_b.json() == []  # usuario_b no ve los buckets de usuario_a
+    app.dependency_overrides.clear()
 
 
 def test_crear_bucket_fixed_sin_importe_devuelve_400(client):

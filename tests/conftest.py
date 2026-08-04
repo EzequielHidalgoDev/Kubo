@@ -3,8 +3,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.auth import get_current_user_id
 from app.db import Base
 from app.main import app, get_db
+
+USUARIO_DE_TEST = "user_de_prueba"
 
 # Base de datos separada de la de desarrollo, solo para tests.
 TEST_DATABASE_URL = "postgresql+psycopg://kubo:kubo@localhost:5432/kubo_test"
@@ -45,6 +48,12 @@ def client(db_session):
     def override_get_db():
         yield db_session
 
+    # Sustituimos también la autenticación real de Clerk por un usuario fijo,
+    # para no depender de tokens reales en los tests.
+    def override_get_current_user_id():
+        return USUARIO_DE_TEST
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user_id] = override_get_current_user_id
     yield TestClient(app)
     app.dependency_overrides.clear()
