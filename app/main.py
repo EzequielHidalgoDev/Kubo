@@ -1,7 +1,9 @@
 from collections.abc import Generator
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user_id
@@ -19,6 +21,16 @@ from motor.models import Bucket, BucketStrategy
 
 # La instancia principal de FastAPI: el objeto que representa toda la API.
 app = FastAPI(title="Kubo")
+
+# Permite que la app Expo (u otro cliente en el navegador) llame a esta API
+# desde un origen distinto. En desarrollo lo dejamos abierto a todos los
+# orígenes; en Fase 3 (CI/CD) conviene restringirlo al dominio real de la app.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -82,7 +94,15 @@ def crear_bucket(
 
     nuevo = BucketModel(user_id=user_id, **bucket.model_dump())
     db.add(nuevo)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as error:
+        # Salta si ya existe un bucket con este id para este usuario
+        # (viola la clave primaria compuesta user_id + id).
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail=f"Ya existe un bucket con id '{bucket.id}'"
+        ) from error
     db.refresh(nuevo)
     return to_bucket_read(nuevo, balances={})  # bucket recién creado: saldo 0
 

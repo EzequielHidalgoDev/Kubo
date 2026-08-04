@@ -58,6 +58,25 @@ def test_crear_bucket_fixed_sin_importe_devuelve_400(client):
     assert "fixed_amount_cents" in respuesta.json()["detail"]
 
 
+def test_crear_bucket_con_id_repetido_devuelve_409(client):
+    datos = {
+        "id": "gastos_fijos",
+        "name": "Gastos fijos",
+        "strategy": "FIXED",
+        "priority": 1,
+        "fixed_amount_cents": 90000,
+    }
+    assert client.post("/buckets", json=datos).status_code == 200
+
+    respuesta_repetida = client.post("/buckets", json=datos)
+    assert respuesta_repetida.status_code == 409
+
+
+def test_cors_permite_origenes_externos(client):
+    respuesta = client.get("/health", headers={"Origin": "http://localhost:19000"})
+    assert respuesta.headers["access-control-allow-origin"] == "*"
+
+
 def test_crear_y_listar_bucket(client):
     respuesta_crear = client.post(
         "/buckets",
