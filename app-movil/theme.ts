@@ -7,12 +7,14 @@ export const colors = {
   surface: '#FFFFFF',
   border: '#E2E8F0',
 
-  textPrimary: '#071A3D', // Navy: también funciona como color de texto principal
+  textPrimary: '#01081D', // Navy: el mismo tono exacto del fondo del logo
   textSecondary: '#64748B',
-  textOnAccent: '#F8FAFC',
+  textOnDark: '#F8FAFC',
 
-  accent: '#22C58B', // Emerald: botones y acciones principales
-  accentPressed: '#1AA173',
+  navy: '#01081D',
+  navyPressed: '#0A1530',
+
+  accent: '#22C58B', // Emerald: reservado para detalles puntuales (progreso, cifras positivas)
 
   error: '#DC2626',
 } as const;
@@ -27,7 +29,7 @@ export const spacing = {
 } as const;
 
 export const typography = {
-  display: { fontSize: 28, fontFamily: 'Inter_700Bold' },
+  display: { fontSize: 40, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   title: { fontSize: 22, fontFamily: 'Inter_600SemiBold' },
   body: { fontSize: 16, fontFamily: 'Inter_400Regular' },
   bodyMedium: { fontSize: 16, fontFamily: 'Inter_500Medium' },
@@ -38,4 +40,5 @@ export const radius = {
   sm: 8,
   md: 12,
   lg: 16,
+  pill: 999,
 } as const;

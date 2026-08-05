@@ -1,10 +1,11 @@
-import { useSignIn } from '@clerk/clerk-expo';
+import { useSignIn, useSSO } from '@clerk/clerk-expo';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { AuthHero } from '../components/AuthHero';
 import { Button } from '../components/Button';
+import { Divider } from '../components/Divider';
+import { GoogleButton } from '../components/GoogleButton';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
-import { colors, spacing, typography } from '../theme';
 
 type Props = {
   onIrARegistro: () => void;
@@ -12,14 +13,26 @@ type Props = {
 
 export function SignInScreen({ onIrARegistro }: Props) {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const { startSSOFlow } = useSSO();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [cargandoGoogle, setCargandoGoogle] = useState(false);
 
   async function handleSignIn() {
     if (!isLoaded) return;
     setError('');
+
+    if (!email.trim()) {
+      setError('Introduce tu email');
+      return;
+    }
+    if (!password) {
+      setError('Introduce tu contraseña');
+      return;
+    }
+
     setCargando(true);
     try {
       const intento = await signIn.create({ identifier: email, password });
@@ -33,12 +46,28 @@ export function SignInScreen({ onIrARegistro }: Props) {
     }
   }
 
+  async function handleGoogle() {
+    setCargandoGoogle(true);
+    try {
+      const { createdSessionId, setActive: activarSesion } = await startSSOFlow({
+        strategy: 'oauth_google',
+      });
+      if (createdSessionId && activarSesion) {
+        await activarSesion({ session: createdSessionId });
+      }
+    } catch {
+      setError('No se pudo iniciar sesión con Google');
+    } finally {
+      setCargandoGoogle(false);
+    }
+  }
+
   return (
     <Screen>
-      <View style={styles.header}>
-        <Text style={styles.title}>Kubo</Text>
-        <Text style={styles.subtitle}>Entra para gestionar tu reparto mensual</Text>
-      </View>
+      <AuthHero />
+
+      <GoogleButton onPress={handleGoogle} loading={cargandoGoogle} />
+      <Divider />
 
       <TextField
         label="Email"
@@ -60,18 +89,3 @@ export function SignInScreen({ onIrARegistro }: Props) {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
-  },
-  title: {
-    ...typography.display,
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-});

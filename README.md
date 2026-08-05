@@ -152,9 +152,35 @@ def listar_buckets(..., user_id: str = Depends(get_current_user_id)):
 
 **Multiusuario:** `buckets` tiene clave primaria compuesta `(user_id, id)` (dos usuarios distintos pueden tener cada uno un bucket con `id="colchon"` sin chocar), y `ledger_entries` guarda también su propio `user_id`. Todas las consultas filtran explícitamente por el `user_id` del token — un usuario nunca puede ver ni modificar los buckets de otro.
 
+## App móvil (`app-movil/`) — Fase 2
+
+Proyecto Expo (React Native + TypeScript). Autenticación con Clerk (email/contraseña + Google), interfaz propia sin componentes prediseñados (Clerk no ofrece UI nativa para iOS/Android, solo para web).
+
+### Cómo levantar el entorno
+
+```bash
+cd app-movil
+npm install
+npx expo start --web    # o sin --web + Expo Go en el móvil
+```
+
+### Sistema de diseño
+
+Todo color, tipografía y espaciado sale de `theme.ts` — ningún componente define estilos sueltos. Paleta de marca: Navy `#01081D` (texto y acción principal), Emerald `#22C58B` (reservado para detalles puntuales: foco de un input, progreso, cifras positivas — nunca en elementos genéricos como el icono de Google, para no diluir su significado), White `#F8FAFC` (fondo).
+
+Componentes base reutilizados en toda la app: `Button`, `TextField`, `Screen`, `AuthHero`, `GoogleButton`, `Divider`.
+
+### Autenticación (Clerk, lado app)
+
+`App.tsx` envuelve la app en `ClerkProvider` (clave pública en `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, en `.env`), con `localization={esES}` para que los mensajes de Clerk salgan en español. `SignedIn`/`SignedOut` deciden qué pantalla mostrar según haya sesión activa o no.
+
+- `screens/SignInScreen.tsx` / `SignUpScreen.tsx`: formularios propios usando los *hooks* `useSignIn`/`useSignUp`/`useSSO` de Clerk. El registro pide verificación por email (código de un solo uso) antes de activar la cuenta.
+- Google usa `useSSO` (`startSSOFlow({ strategy: 'oauth_google' })`), que abre un navegador del sistema y vuelve a la app — requiere `scheme` en `app.json` y `WebBrowser.maybeCompleteAuthSession()` en `App.tsx`.
+- Validación de campos vacíos se hace en el propio formulario (no se llama a la API si falta un dato), para controlar el idioma del mensaje y evitar una petición de red innecesaria.
+
 ## Convenciones
 
 - Código (clases, funciones, variables): inglés.
 - Commits, branches, PRs, comentarios de código y conversación: español.
-- Commits: Conventional Commits en español, sin emojis, sin coautoría de Claude.
+- Commits: Conventional Commits en español, sin emojis ni menciones a herramientas de IA.
 - Branches: `feat/motor-allocation`, etc.

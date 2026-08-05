@@ -1,21 +1,37 @@
+import { useState } from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, spacing, typography } from '../theme';
 
 type Props = TextInputProps & {
   label: string;
   error?: string;
 };
 
-// Input con label arriba y borde fino — sin sombras ni relleno de color,
-// el foco se marca solo cambiando el color del borde.
-export function TextField({ label, error, style, ...inputProps }: Props) {
+// Input minimal: solo línea inferior, sin caja completa ni sombra.
+// El borde se pone Emerald mientras el campo tiene el foco.
+export function TextField({ label, error, style, onFocus, onBlur, ...inputProps }: Props) {
+  const [enfocado, setEnfocado] = useState(false);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, error && styles.inputError, style]}
+        style={[
+          styles.input,
+          enfocado && !error && styles.inputEnfocado,
+          error && styles.inputError,
+          style,
+        ]}
         placeholderTextColor={colors.textSecondary}
         autoCapitalize="none"
+        onFocus={(e) => {
+          setEnfocado(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setEnfocado(false);
+          onBlur?.(e);
+        }}
         {...inputProps}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -32,14 +48,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   input: {
-    height: 52,
-    borderWidth: 1,
+    height: 48,
+    borderBottomWidth: 1.5,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
     color: colors.textPrimary,
+    // outlineStyle: quita el anillo de foco por defecto del navegador en
+    // web, que tapaba nuestro borde Emerald personalizado. No afecta a
+    // iOS/Android, ahí no existe ese estilo.
+    outlineStyle: 'none',
     ...typography.body,
+  },
+  inputEnfocado: {
+    borderColor: colors.accent,
   },
   inputError: {
     borderColor: colors.error,

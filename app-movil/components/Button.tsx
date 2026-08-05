@@ -9,9 +9,8 @@ type Props = {
   loading?: boolean;
 };
 
-// Un único componente de botón para toda la app: nada de estilos sueltos
-// repetidos pantalla a pantalla. "primary" = acción principal (Emerald,
-// relleno). "secondary" = acción secundaria (solo borde, sin relleno).
+// "primary" = acción principal: Navy sólido, forma de pastilla (redondeo
+// total). "secondary" = solo borde fino, sin relleno.
 export function Button({ label, onPress, variant = 'primary', disabled, loading }: Props) {
   const isPrimary = variant === 'primary';
 
@@ -27,7 +26,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading 
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.textOnAccent : colors.textPrimary} />
+        <ActivityIndicator color={isPrimary ? colors.textOnDark : colors.textPrimary} />
       ) : (
         <Text style={[styles.label, isPrimary ? styles.labelPrimary : styles.labelSecondary]}>
           {label}
@@ -39,21 +38,21 @@ export function Button({ label, onPress, variant = 'primary', disabled, loading 
 
 const styles = StyleSheet.create({
   base: {
-    height: 52,
-    borderRadius: radius.md,
+    height: 56,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
   primary: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.navy,
   },
   primaryPressed: {
-    backgroundColor: colors.accentPressed,
+    backgroundColor: colors.navyPressed,
   },
   secondary: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
   },
   secondaryPressed: {
@@ -66,7 +65,7 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
   },
   labelPrimary: {
-    color: colors.textOnAccent,
+    color: colors.textOnDark,
   },
   labelSecondary: {
     color: colors.textPrimary,
