@@ -1,17 +1,28 @@
-import { Image, StyleSheet } from 'react-native';
-import { spacing } from '../theme';
+import { Image, StyleSheet, Text } from 'react-native';
+import { colors, spacing, typography } from '../theme';
 
-// Marca de Kubo con fondo transparente: flota directamente sobre el
-// fondo de la pantalla, sin caja alrededor.
-export function AuthHero() {
-  return <Image source={require('../assets/brand/logo-mark.png')} style={styles.logo} />;
+// Logo + título discreto (tamaño de sección, no titular gigante) — lo
+// justo para notar que has cambiado de pantalla al navegar entre
+// login y registro, sin repetir literalmente el texto del botón.
+export function AuthHero({ title }: { title: string }) {
+  return (
+    <>
+      <Image source={require('../assets/brand/logo-mark.png')} style={styles.logo} />
+      <Text style={styles.title}>{title}</Text>
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
   logo: {
-    width: 84,
-    height: 84,
+    width: 52,
+    height: 52,
     marginTop: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  title: {
+    ...typography.title,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
 });

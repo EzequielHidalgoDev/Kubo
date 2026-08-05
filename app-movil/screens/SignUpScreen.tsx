@@ -88,8 +88,7 @@ export function SignUpScreen({ onVolverALogin }: Props) {
   if (pendienteDeVerificar) {
     return (
       <Screen>
-        <AuthHero />
-        <Text style={styles.title}>Revisa tu email</Text>
+        <AuthHero title="Revisa tu email" />
         <Text style={styles.subtitle}>Te hemos mandado un código a {email}</Text>
         <TextField
           label="Código de verificación"
@@ -105,7 +104,7 @@ export function SignUpScreen({ onVolverALogin }: Props) {
 
   return (
     <Screen>
-      <AuthHero />
+      <AuthHero title="Crear cuenta" />
 
       <GoogleButton onPress={handleGoogle} loading={cargandoGoogle} />
       <Divider />
@@ -125,17 +124,13 @@ export function SignUpScreen({ onVolverALogin }: Props) {
         error={error || undefined}
       />
 
-      <Button label="Crear cuenta" onPress={handleCrearCuenta} loading={cargando} />
+      <Button label="Continuar" onPress={handleCrearCuenta} loading={cargando} />
       <Button label="Ya tengo cuenta" onPress={onVolverALogin} variant="secondary" />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    ...typography.title,
-    color: colors.textPrimary,
-  },
   subtitle: {
     ...typography.body,
     color: colors.textSecondary,

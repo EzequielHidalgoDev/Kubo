@@ -64,7 +64,7 @@ export function SignInScreen({ onIrARegistro }: Props) {
 
   return (
     <Screen>
-      <AuthHero />
+      <AuthHero title="Entrar" />
 
       <GoogleButton onPress={handleGoogle} loading={cargandoGoogle} />
       <Divider />
@@ -84,7 +84,7 @@ export function SignInScreen({ onIrARegistro }: Props) {
         error={error || undefined}
       />
 
-      <Button label="Entrar" onPress={handleSignIn} loading={cargando} />
+      <Button label="Continuar" onPress={handleSignIn} loading={cargando} />
       <Button label="Crear cuenta" onPress={onIrARegistro} variant="secondary" />
     </Screen>
   );
