@@ -4,14 +4,17 @@ import { AuthHero } from '../components/AuthHero';
 import { Button } from '../components/Button';
 import { Divider } from '../components/Divider';
 import { GoogleButton } from '../components/GoogleButton';
+import { LinkText } from '../components/LinkText';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
+import { traducirErrorClerk } from '../lib/traducirErrorClerk';
 
 type Props = {
   onIrARegistro: () => void;
+  onOlvideContrasena: () => void;
 };
 
-export function SignInScreen({ onIrARegistro }: Props) {
+export function SignInScreen({ onIrARegistro, onOlvideContrasena }: Props) {
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
   const [email, setEmail] = useState('');
@@ -25,7 +28,7 @@ export function SignInScreen({ onIrARegistro }: Props) {
     setError('');
 
     if (!email.trim()) {
-      setError('Introduce tu email');
+      setError('Introduce tu email o nombre de usuario');
       return;
     }
     if (!password) {
@@ -40,7 +43,7 @@ export function SignInScreen({ onIrARegistro }: Props) {
         await setActive({ session: intento.createdSessionId });
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.message ?? 'No se pudo iniciar sesión');
+      setError(traducirErrorClerk(err, 'No se pudo iniciar sesión'));
     } finally {
       setCargando(false);
     }
@@ -70,11 +73,10 @@ export function SignInScreen({ onIrARegistro }: Props) {
       <Divider />
 
       <TextField
-        label="Email"
+        label="Email o usuario"
         value={email}
         onChangeText={setEmail}
-        keyboardType="email-address"
-        autoComplete="email"
+        autoComplete="username"
       />
       <TextField
         label="Contraseña"
@@ -82,7 +84,10 @@ export function SignInScreen({ onIrARegistro }: Props) {
         onChangeText={setPassword}
         secureTextEntry
         error={error || undefined}
+        returnKeyType="go"
+        onSubmitEditing={handleSignIn}
       />
+      <LinkText label="¿Has olvidado tu contraseña?" onPress={onOlvideContrasena} />
 
       <Button label="Continuar" onPress={handleSignIn} loading={cargando} />
       <Button label="Crear cuenta" onPress={onIrARegistro} variant="secondary" />

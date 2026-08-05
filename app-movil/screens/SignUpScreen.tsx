@@ -7,6 +7,7 @@ import { Divider } from '../components/Divider';
 import { GoogleButton } from '../components/GoogleButton';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
+import { traducirErrorClerk } from '../lib/traducirErrorClerk';
 import { colors, typography } from '../theme';
 
 type Props = {
@@ -17,6 +18,7 @@ export function SignUpScreen({ onVolverALogin }: Props) {
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startSSOFlow } = useSSO();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [codigo, setCodigo] = useState('');
   const [pendienteDeVerificar, setPendienteDeVerificar] = useState(false);
@@ -50,20 +52,28 @@ export function SignUpScreen({ onVolverALogin }: Props) {
       setError('Introduce tu email');
       return;
     }
+    if (!username.trim()) {
+      setError('Introduce un nombre de usuario');
+      return;
+    }
     if (!password) {
       setError('Introduce una contraseña');
+      return;
+    }
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
       return;
     }
 
     setCargando(true);
     try {
-      await signUp.create({ emailAddress: email, password });
+      await signUp.create({ emailAddress: email, username, password });
       // Clerk manda un código por email; hasta que se verifica, la cuenta
       // no queda activa del todo.
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setPendienteDeVerificar(true);
     } catch (err: any) {
-      setError(err?.errors?.[0]?.message ?? 'No se pudo crear la cuenta');
+      setError(traducirErrorClerk(err, 'No se pudo crear la cuenta'));
     } finally {
       setCargando(false);
     }
@@ -79,7 +89,7 @@ export function SignUpScreen({ onVolverALogin }: Props) {
         await setActive({ session: intento.createdSessionId });
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.message ?? 'Código incorrecto');
+      setError(traducirErrorClerk(err, 'Código incorrecto'));
     } finally {
       setCargando(false);
     }
@@ -96,8 +106,19 @@ export function SignUpScreen({ onVolverALogin }: Props) {
           onChangeText={setCodigo}
           keyboardType="number-pad"
           error={error || undefined}
+          returnKeyType="go"
+          onSubmitEditing={handleVerificarCodigo}
         />
         <Button label="Confirmar" onPress={handleVerificarCodigo} loading={cargando} />
+        <Button
+          label="Cancelar"
+          variant="secondary"
+          onPress={() => {
+            setPendienteDeVerificar(false);
+            setCodigo('');
+            setError('');
+          }}
+        />
       </Screen>
     );
   }
@@ -117,11 +138,19 @@ export function SignUpScreen({ onVolverALogin }: Props) {
         autoComplete="email"
       />
       <TextField
+        label="Nombre de usuario"
+        value={username}
+        onChangeText={setUsername}
+        autoComplete="username"
+      />
+      <TextField
         label="Contraseña"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         error={error || undefined}
+        returnKeyType="go"
+        onSubmitEditing={handleCrearCuenta}
       />
 
       <Button label="Continuar" onPress={handleCrearCuenta} loading={cargando} />

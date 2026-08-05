@@ -14,6 +14,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { Button } from './components/Button';
 import { Screen } from './components/Screen';
+import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
 import { SignInScreen } from './screens/SignInScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
 import { tokenCache } from './tokenCache';
@@ -25,8 +26,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
+type Pantalla = 'login' | 'registro' | 'olvide-password';
+
 function AuthGate() {
-  const [pantalla, setPantalla] = useState<'login' | 'registro'>('login');
+  const [pantalla, setPantalla] = useState<Pantalla>('login');
 
   return (
     <>
@@ -34,10 +37,17 @@ function AuthGate() {
         <PantallaPrincipal />
       </SignedIn>
       <SignedOut>
-        {pantalla === 'login' ? (
-          <SignInScreen onIrARegistro={() => setPantalla('registro')} />
-        ) : (
+        {pantalla === 'login' && (
+          <SignInScreen
+            onIrARegistro={() => setPantalla('registro')}
+            onOlvideContrasena={() => setPantalla('olvide-password')}
+          />
+        )}
+        {pantalla === 'registro' && (
           <SignUpScreen onVolverALogin={() => setPantalla('login')} />
+        )}
+        {pantalla === 'olvide-password' && (
+          <ForgotPasswordScreen onVolverALogin={() => setPantalla('login')} />
         )}
       </SignedOut>
     </>
