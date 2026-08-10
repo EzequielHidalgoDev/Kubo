@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors, spacing, typography } from '../theme';
+import { Colors, spacing, typography, useColors } from '../theme';
 
 type Props = TextInputProps & {
   label: string;
@@ -10,6 +10,8 @@ type Props = TextInputProps & {
 // Input minimal: solo línea inferior, sin caja completa ni sombra.
 // El borde se pone Emerald mientras el campo tiene el foco.
 export function TextField({ label, error, style, onFocus, onBlur, ...inputProps }: Props) {
+  const colors = useColors();
+  const styles = getStyles(colors);
   const [enfocado, setEnfocado] = useState(false);
 
   return (
@@ -39,35 +41,38 @@ export function TextField({ label, error, style, onFocus, onBlur, ...inputProps 
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.xs,
-  },
-  label: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  input: {
-    height: 48,
-    borderBottomWidth: 1.5,
-    borderColor: colors.border,
-    paddingHorizontal: 0,
-    backgroundColor: 'transparent',
-    color: colors.textPrimary,
-    // outlineStyle: quita el anillo de foco por defecto del navegador en
-    // web, que tapaba nuestro borde Emerald personalizado. No afecta a
-    // iOS/Android, ahí no existe ese estilo.
-    outlineStyle: 'none',
-    ...typography.body,
-  },
-  inputEnfocado: {
-    borderColor: colors.accent,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  error: {
-    ...typography.caption,
-    color: colors.error,
-  },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: {
+      gap: spacing.xs,
+    },
+    label: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    input: {
+      minHeight: 48,
+      paddingVertical: spacing.xs,
+      borderBottomWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: 0,
+      backgroundColor: 'transparent',
+      color: colors.textPrimary,
+      // outlineStyle: quita el anillo de foco por defecto del navegador en
+      // web, que tapaba nuestro borde Emerald personalizado. No afecta a
+      // iOS/Android, ahí no existe ese estilo.
+      outlineStyle: 'none',
+      ...typography.body,
+    },
+    inputEnfocado: {
+      borderColor: colors.accent,
+    },
+    inputError: {
+      borderColor: colors.error,
+    },
+    error: {
+      ...typography.caption,
+      color: colors.error,
+    },
+  });
+}

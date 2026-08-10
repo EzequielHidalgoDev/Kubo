@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, typography } from '../theme';
+import { Colors, typography, useColors } from '../theme';
 
 type Props = {
   label: string;
@@ -7,6 +7,9 @@ type Props = {
 };
 
 export function LinkText({ label, onPress }: Props) {
+  const colors = useColors();
+  const styles = getStyles(colors);
+
   return (
     <Pressable onPress={onPress} hitSlop={8}>
       <Text style={styles.text}>{label}</Text>
@@ -14,10 +17,12 @@ export function LinkText({ label, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  text: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textDecorationLine: 'underline',
-  },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    text: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      textDecorationLine: 'underline',
+    },
+  });
+}

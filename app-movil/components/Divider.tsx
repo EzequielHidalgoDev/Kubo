@@ -1,7 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../theme';
+import { Colors, spacing, typography, useColors } from '../theme';
 
 export function Divider() {
+  const colors = useColors();
+  const styles = getStyles(colors);
+
   return (
     <View style={styles.row}>
       <View style={styles.line} />
@@ -11,19 +14,21 @@ export function Divider() {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  text: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    line: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    text: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+  });
+}
