@@ -3,11 +3,13 @@ from enum import Enum
 
 
 class BucketStrategy(str, Enum):
-    """Las 3 formas en que un bucket puede recibir dinero en la cascada."""
+    """Las 4 formas en que un bucket puede recibir dinero en la cascada."""
 
     FIXED = "FIXED"  # importe fijo cada mes (ej. gastos fijos)
     FILL_TO_TARGET = "FILL_TO_TARGET"  # rellena hasta un objetivo (ej. colchón)
     REMAINDER = "REMAINDER"  # se lleva todo lo que sobre (ej. inversión)
+    DEBT = "DEBT"  # rellena hasta saldar una deuda (igual que FILL_TO_TARGET,
+    # pero el "objetivo" es lo que debes, no lo que quieres ahorrar)
 
 
 @dataclass(frozen=True)
@@ -25,11 +27,11 @@ class Bucket:
         # Validamos que cada estrategia tenga el dato que necesita para funcionar.
         if self.strategy is BucketStrategy.FIXED and self.fixed_amount_cents is None:
             raise ValueError(f"Bucket '{self.id}': FIXED requiere fixed_amount_cents")
-        if self.strategy is BucketStrategy.FILL_TO_TARGET and (
+        if self.strategy in (BucketStrategy.FILL_TO_TARGET, BucketStrategy.DEBT) and (
             self.target_cents is None or self.target_cents <= 0
         ):
             raise ValueError(
-                f"Bucket '{self.id}': FILL_TO_TARGET requiere target_cents > 0"
+                f"Bucket '{self.id}': {self.strategy.value} requiere target_cents > 0"
             )
 
 
