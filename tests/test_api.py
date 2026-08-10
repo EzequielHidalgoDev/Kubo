@@ -1,13 +1,36 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 
 from app.auth import get_current_user_id
 from app.main import app, get_db
+from app.models import LedgerEntryModel
 
 
 def test_health(client):
     respuesta = client.get("/health")
     assert respuesta.status_code == 200
     assert respuesta.json() == {"status": "ok"}
+
+
+def test_crear_bucket_con_saldo_inicial(client):
+    respuesta = client.post(
+        "/buckets",
+        json={
+            "id": "colchon",
+            "name": "Colchón",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 400000,
+            "initial_balance_cents": 400000,
+        },
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.json()["balance_cents"] == 400000
+
+    # Y que quede guardado de verdad, no solo en la respuesta.
+    listado = client.get("/buckets").json()
+    assert listado[0]["balance_cents"] == 400000
 
 
 def test_allocate_con_ingreso_negativo_devuelve_422(client):
@@ -227,3 +250,213 @@ def test_allocate_recuerda_saldo_previo_del_colchon(client):
     colchon = next(a for a in datos["allocations"] if a["bucket_id"] == "colchon")
     assert colchon["amount_cents"] == 40000  # sigue habiendo hueco
     assert colchon["reached_target"] is False  # 80.000 de 100.000, aún no llega
+
+
+def test_ultimo_reparto_null_si_nunca_se_ha_repartido(client):
+    respuesta = client.get("/allocate/ultimo")
+    assert respuesta.status_code == 200
+    assert respuesta.json()["realizado_en"] is None
+
+
+def test_ultimo_reparto_devuelve_fecha_tras_repartir(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 90000,
+        },
+    )
+    client.post("/allocate", json={"income_cents": 90000})
+
+    respuesta = client.get("/allocate/ultimo")
+    assert respuesta.json()["realizado_en"] is not None
+
+
+def test_editar_bucket_recalcula_el_reparto_de_este_mes(client):
+    # Dos buckets FIXED a la misma prioridad: gastos_fijos y libre.
+    client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 60000,
+        },
+    )
+    client.post(
+        "/buckets",
+        json={
+            "id": "libre",
+            "name": "Libre para gastar",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 60000,
+        },
+    )
+    client.post("/allocate", json={"income_cents": 120000})
+
+    libre_antes = next(
+        b for b in client.get("/buckets").json() if b["id"] == "libre"
+    )
+    assert libre_antes["balance_cents"] == 60000
+
+    # Bajamos "libre" a 30.000: el reparto de este mes ya hecho debe
+    # actualizarse solo, sin tener que volver a pulsar "Repartir".
+    client.put(
+        "/buckets/libre",
+        json={
+            "name": "Libre para gastar",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 30000,
+        },
+    )
+
+    libre_despues = next(
+        b for b in client.get("/buckets").json() if b["id"] == "libre"
+    )
+    assert libre_despues["balance_cents"] == 30000
+
+
+def test_historial_vacio_sin_repartos(client):
+    respuesta = client.get("/historial")
+    assert respuesta.status_code == 200
+    assert respuesta.json() == []
+
+
+def test_historial_devuelve_el_reparto_del_mes(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 90000,
+        },
+    )
+    client.post("/allocate", json={"income_cents": 90000})
+
+    respuesta = client.get("/historial")
+    assert respuesta.status_code == 200
+    meses = respuesta.json()
+    assert len(meses) == 1
+    assert meses[0]["income_cents"] == 90000
+    assert meses[0]["allocations"] == [
+        {"bucket_id": "gastos_fijos", "bucket_name": "Gastos fijos", "amount_cents": 90000}
+    ]
+
+
+def test_bucket_fixed_no_acumula_saldo_de_meses_anteriores(client, db_session):
+    # Gastos fijos es un importe recurrente, no algo que se va acumulando:
+    # el saldo mostrado debe ser solo el de este mes.
+    client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 60000,
+        },
+    )
+    client.post("/allocate", json={"income_cents": 60000})
+
+    # Empujamos ese movimiento al mes pasado, simulando que ha pasado un mes.
+    db_session.query(LedgerEntryModel).update(
+        {LedgerEntryModel.created_at: datetime.now(timezone.utc) - timedelta(days=32)}
+    )
+    db_session.commit()
+
+    bucket = client.get("/buckets").json()[0]
+    assert bucket["balance_cents"] == 0
+
+
+def test_retirar_de_colchon_resta_del_saldo(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "colchon",
+            "name": "Colchón",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 400000,
+            "initial_balance_cents": 400000,
+        },
+    )
+
+    respuesta = client.post("/buckets/colchon/retirar", json={"amount_cents": 100000})
+    assert respuesta.status_code == 200
+    assert respuesta.json()["balance_cents"] == 300000
+
+
+def test_retirar_mas_de_lo_que_hay_devuelve_400(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "colchon",
+            "name": "Colchón",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 400000,
+            "initial_balance_cents": 100000,
+        },
+    )
+
+    respuesta = client.post("/buckets/colchon/retirar", json={"amount_cents": 200000})
+    assert respuesta.status_code == 400
+
+
+def test_retirar_de_bucket_fixed_devuelve_400(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 60000,
+        },
+    )
+
+    respuesta = client.post("/buckets/gastos_fijos/retirar", json={"amount_cents": 1000})
+    assert respuesta.status_code == 400
+
+
+def test_crear_bucket_de_deuda_y_repartir(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "deuda",
+            "name": "Tarjeta de crédito",
+            "strategy": "DEBT",
+            "priority": 1,
+            "target_cents": 50000,
+        },
+    )
+    respuesta = client.post("/allocate", json={"income_cents": 20000})
+    assert respuesta.status_code == 200
+
+    bucket = client.get("/buckets").json()[0]
+    assert bucket["balance_cents"] == 20000  # lo pagado hasta ahora, se acumula
+
+
+def test_retirar_de_bucket_de_deuda_devuelve_400(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "deuda",
+            "name": "Tarjeta de crédito",
+            "strategy": "DEBT",
+            "priority": 1,
+            "target_cents": 50000,
+        },
+    )
+    client.post("/allocate", json={"income_cents": 20000})
+
+    respuesta = client.post("/buckets/deuda/retirar", json={"amount_cents": 1000})
+    assert respuesta.status_code == 400

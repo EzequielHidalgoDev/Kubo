@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -10,6 +12,9 @@ class BucketCreate(BaseModel):
     priority: int
     target_cents: int | None = None
     fixed_amount_cents: int | None = None
+    # Dinero que ya tenías ahorrado antes de usar Kubo, para que el bucket
+    # no arranque en 0€ si en la vida real ya tenía algo dentro.
+    initial_balance_cents: int | None = None
 
 
 class BucketUpdate(BaseModel):
@@ -63,3 +68,35 @@ class AllocationResultRead(BaseModel):
     income_cents: int
     allocations: list[BucketAllocationRead]
     unallocated_cents: int
+
+
+class UltimoRepartoRead(BaseModel):
+    """Cuándo fue el último reparto automático, para saber si ya se hizo
+    el de este mes y bloquear el formulario hasta el mes siguiente."""
+
+    realizado_en: datetime | None
+
+
+class HistorialAsignacionRead(BaseModel):
+    """Cuánto se llevó un bucket concreto en el reparto de un mes."""
+
+    bucket_id: str
+    bucket_name: str
+    amount_cents: int
+
+
+class HistorialMesRead(BaseModel):
+    """El reparto completo de un mes: ingreso total y desglose por bucket."""
+
+    year: int
+    month: int
+    income_cents: int
+    allocations: list[HistorialAsignacionRead]
+
+
+class RetiroCreate(BaseModel):
+    """Lo que la API espera recibir para registrar un gasto desde un bucket
+    de ahorro (colchón, inversión): resta del saldo acumulado."""
+
+    amount_cents: int = Field(gt=0)
+    note: str | None = None

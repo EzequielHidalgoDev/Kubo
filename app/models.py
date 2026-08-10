@@ -1,3 +1,4 @@
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKeyConstraint, Integer, String, func
@@ -43,3 +44,19 @@ class LedgerEntryModel(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     note: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class MonthlyIncomeModel(Base):
+    """Tabla 'monthly_incomes': el ingreso que el usuario repartió cada mes.
+
+    Se guarda aparte de ledger_entries porque el reparto en sí es solo el
+    resultado (cuánto tocó a cada bucket); esto es el dato de entrada que
+    lo generó, para poder recalcular el reparto de este mes si el usuario
+    edita un bucket después de haber repartido."""
+
+    __tablename__ = "monthly_incomes"
+
+    user_id: Mapped[str] = mapped_column(String, primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    month: Mapped[int] = mapped_column(Integer, primary_key=True)
+    income_cents: Mapped[int] = mapped_column(Integer, nullable=False)
