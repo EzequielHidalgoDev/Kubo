@@ -8,7 +8,7 @@ import { GoogleButton } from '../components/GoogleButton';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
 import { traducirErrorClerk } from '../lib/traducirErrorClerk';
-import { colors, typography } from '../theme';
+import { Colors, typography, useColors } from '../theme';
 
 type Props = {
   onVolverALogin: () => void;
@@ -16,6 +16,8 @@ type Props = {
 
 export function SignUpScreen({ onVolverALogin }: Props) {
   const { signUp, setActive, isLoaded } = useSignUp();
+  const colors = useColors();
+  const styles = getStyles(colors);
   const { startSSOFlow } = useSSO();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -159,9 +161,11 @@ export function SignUpScreen({ onVolverALogin }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+  });
+}

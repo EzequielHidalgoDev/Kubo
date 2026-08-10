@@ -6,7 +6,7 @@ import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
 import { traducirErrorClerk } from '../lib/traducirErrorClerk';
-import { colors, typography } from '../theme';
+import { Colors, typography, useColors } from '../theme';
 
 type Props = {
   onVolverALogin: () => void;
@@ -14,6 +14,8 @@ type Props = {
 
 export function ForgotPasswordScreen({ onVolverALogin }: Props) {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const colors = useColors();
+  const styles = getStyles(colors);
   const [email, setEmail] = useState('');
   const [codigo, setCodigo] = useState('');
   const [nuevaPassword, setNuevaPassword] = useState('');
@@ -140,9 +142,11 @@ export function ForgotPasswordScreen({ onVolverALogin }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-});
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+  });
+}

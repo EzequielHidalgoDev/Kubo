@@ -1,0 +1,156 @@
+import { useAuth } from '@clerk/clerk-expo';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Screen } from '../components/Screen';
+import { Bucket, HistorialMes, listarBuckets, obtenerHistorial } from '../lib/api';
+import { fusionarColchon } from '../lib/buckets';
+import { formatearCentimos } from '../lib/money';
+import { nombreMes } from '../lib/text';
+import { Colors, radius, spacing, typography, useColors } from '../theme';
+
+// Gastos fijos y Libre para gastar no acumulan (se resetean cada mes, ver
+// Inicio), así que no tiene sentido incluirlos en un total de siempre.
+const BUCKETS_ACUMULABLES = ['FILL_TO_TARGET', 'DEBT', 'REMAINDER'];
+
+export function HistorialScreen() {
+  const { getToken } = useAuth();
+  const colors = useColors();
+  const styles = getStyles(colors);
+  const [meses, setMeses] = useState<HistorialMes[]>([]);
+  const [buckets, setBuckets] = useState<Bucket[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+
+  const cargarHistorial = useCallback(async () => {
+    setError('');
+    try {
+      const token = await getToken();
+      const [historial, listaBuckets] = await Promise.all([
+        obtenerHistorial(token),
+        listarBuckets(token),
+      ]);
+      setMeses(historial);
+      setBuckets(listaBuckets);
+    } catch (err) {
+      console.error('Error al cargar el historial:', err);
+      setError('No se pudo cargar el historial');
+    } finally {
+      setCargando(false);
+    }
+  }, [getToken]);
+
+  useEffect(() => {
+    cargarHistorial();
+  }, [cargarHistorial]);
+
+  const totales = fusionarColchon(buckets.filter((b) => BUCKETS_ACUMULABLES.includes(b.strategy)));
+
+  return (
+    <Screen>
+      <Text style={styles.titulo}>Historial</Text>
+
+      {cargando && <ActivityIndicator color={colors.textPrimary} />}
+
+      {!cargando && error ? <Text style={styles.error}>{error}</Text> : null}
+
+      {!cargando && !error && meses.length === 0 && totales.length === 0 && (
+        <Text style={styles.vacio}>Todavía no has repartido ningún ingreso.</Text>
+      )}
+
+      {!cargando && !error && meses.length === 0 && totales.length > 0 && (
+        <Text style={styles.vacio}>Todavía no has cerrado ningún mes, pero ya tienes esto ahorrado:</Text>
+      )}
+
+      {!cargando && !error && totales.length > 0 && (
+        <View style={styles.tarjetaTotales}>
+          <Text style={styles.mes}>En total</Text>
+          {totales.map((b) => (
+            <View key={b.id} style={styles.fila}>
+              <Text style={styles.filaNombre}>{b.name}</Text>
+              <Text style={styles.filaTotalImporte}>{formatearCentimos(b.balance_cents)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {meses.map((mes) => (
+        <View key={`${mes.year}-${mes.month}`} style={styles.tarjeta}>
+          <View style={styles.cabecera}>
+            <Text style={styles.mes}>{nombreMes(mes.year, mes.month)}</Text>
+            <Text style={styles.ingreso}>{formatearCentimos(mes.income_cents)}</Text>
+          </View>
+          {mes.allocations.map((a) => (
+            <View key={a.bucket_id} style={styles.fila}>
+              <Text style={styles.filaNombre}>{a.bucket_name}</Text>
+              <Text style={styles.filaImporte}>{formatearCentimos(a.amount_cents)}</Text>
+            </View>
+          ))}
+        </View>
+      ))}
+    </Screen>
+  );
+}
+
+function getStyles(colors: Colors) {
+  return StyleSheet.create({
+    titulo: {
+      ...typography.title,
+      color: colors.textPrimary,
+      marginTop: spacing.md,
+    },
+    error: {
+      ...typography.body,
+      color: colors.error,
+    },
+    vacio: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    tarjetaTotales: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    filaTotalImporte: {
+      ...typography.bodyMedium,
+      color: colors.accent,
+    },
+    tarjeta: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    cabecera: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.xs,
+    },
+    mes: {
+      ...typography.bodyMedium,
+      color: colors.textPrimary,
+    },
+    ingreso: {
+      ...typography.bodyMedium,
+      color: colors.textPrimary,
+    },
+    fila: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    filaNombre: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    filaImporte: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+  });
+}
