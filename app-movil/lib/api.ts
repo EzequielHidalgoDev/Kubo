@@ -1,0 +1,130 @@
+const API_URL = process.env.EXPO_PUBLIC_API_URL!;
+
+// Cliente mínimo para hablar con la API de Kubo: añade el token de Clerk
+// en cada petición y convierte los errores en excepciones con mensaje.
+export async function apiFetch<T>(
+  path: string,
+  token: string | null,
+  options: RequestInit = {}
+): Promise<T> {
+  const respuesta = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+
+  if (!respuesta.ok) {
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    throw new Error(cuerpo.detail ?? `Error ${respuesta.status}`);
+  }
+
+  // 204 No Content (ej. borrar un bucket) no trae cuerpo que parsear.
+  if (respuesta.status === 204) {
+    return undefined as T;
+  }
+  return respuesta.json();
+}
+
+export type Bucket = {
+  id: string;
+  name: string;
+  strategy: 'FIXED' | 'FILL_TO_TARGET' | 'REMAINDER' | 'DEBT';
+  priority: number;
+  target_cents: number | null;
+  fixed_amount_cents: number | null;
+  balance_cents: number;
+};
+
+export function listarBuckets(token: string | null) {
+  return apiFetch<Bucket[]>('/buckets', token);
+}
+
+export type NuevoBucket = {
+  id: string;
+  name: string;
+  strategy: 'FIXED' | 'FILL_TO_TARGET' | 'REMAINDER' | 'DEBT';
+  priority: number;
+  target_cents?: number;
+  fixed_amount_cents?: number;
+  initial_balance_cents?: number;
+};
+
+export function crearBucket(token: string | null, datos: NuevoBucket) {
+  return apiFetch<Bucket>('/buckets', token, {
+    method: 'POST',
+    body: JSON.stringify(datos),
+  });
+}
+
+export type CambiosBucket = {
+  name: string;
+  strategy: 'FIXED' | 'FILL_TO_TARGET' | 'DEBT' | 'REMAINDER';
+  priority: number;
+  target_cents?: number;
+  fixed_amount_cents?: number;
+};
+
+export function editarBucket(token: string | null, id: string, datos: CambiosBucket) {
+  return apiFetch<Bucket>(`/buckets/${id}`, token, {
+    method: 'PUT',
+    body: JSON.stringify(datos),
+  });
+}
+
+export function borrarBucket(token: string | null, id: string) {
+  return apiFetch<void>(`/buckets/${id}`, token, { method: 'DELETE' });
+}
+
+export type BucketAllocation = {
+  bucket_id: string;
+  amount_cents: number;
+  reached_target: boolean;
+};
+
+export type AllocationResult = {
+  income_cents: number;
+  allocations: BucketAllocation[];
+  unallocated_cents: number;
+};
+
+export function ejecutarReparto(token: string | null, incomeCents: number) {
+  return apiFetch<AllocationResult>('/allocate', token, {
+    method: 'POST',
+    body: JSON.stringify({ income_cents: incomeCents }),
+  });
+}
+
+export type UltimoReparto = {
+  realizado_en: string | null;
+};
+
+export function obtenerUltimoReparto(token: string | null) {
+  return apiFetch<UltimoReparto>('/allocate/ultimo', token);
+}
+
+export type HistorialAsignacion = {
+  bucket_id: string;
+  bucket_name: string;
+  amount_cents: number;
+};
+
+export type HistorialMes = {
+  year: number;
+  month: number;
+  income_cents: number;
+  allocations: HistorialAsignacion[];
+};
+
+export function obtenerHistorial(token: string | null) {
+  return apiFetch<HistorialMes[]>('/historial', token);
+}
+
+export function retirarDeBucket(token: string | null, id: string, amountCents: number) {
+  return apiFetch<Bucket>(`/buckets/${id}/retirar`, token, {
+    method: 'POST',
+    body: JSON.stringify({ amount_cents: amountCents }),
+  });
+}
