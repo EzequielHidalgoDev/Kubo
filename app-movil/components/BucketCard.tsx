@@ -43,6 +43,9 @@ export function BucketCard({
   const progreso = objetivo ? Math.min(bucket.balance_cents / objetivo, 1) : null;
   const deudaSaldada = bucket.strategy === 'DEBT' && objetivo !== null && bucket.balance_cents >= objetivo;
   const puedeReordenar = onSubir || onBajar;
+  // Solo la tarjeta fusionada del colchón (cuando hay deuda) no tiene
+  // ninguna acción: explica por qué, para que no parezca un hueco.
+  const sinAcciones = !onEditar && !onBorrar && !onRetirar;
 
   return (
     <View style={styles.card}>
@@ -102,6 +105,13 @@ export function BucketCard({
       {bucket.id === 'colchon' && (
         <Text style={styles.consejo}>
           Consejo: mejor en una cuenta remunerada que parado sin más.
+        </Text>
+      )}
+
+      {sinAcciones && (
+        <Text style={styles.consejo}>
+          Se compone de dos partes internas (para priorizar tu deuda entre medias) y no se
+          edita como una sola desde aquí.
         </Text>
       )}
 

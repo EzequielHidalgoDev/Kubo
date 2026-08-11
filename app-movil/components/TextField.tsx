@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { Colors, spacing, typography, useColors } from '../theme';
 
 type Props = TextInputProps & {
@@ -9,33 +10,50 @@ type Props = TextInputProps & {
 
 // Input minimal: solo línea inferior, sin caja completa ni sombra.
 // El borde se pone Emerald mientras el campo tiene el foco.
-export function TextField({ label, error, style, onFocus, onBlur, ...inputProps }: Props) {
+export function TextField({ label, error, style, onFocus, onBlur, secureTextEntry, ...inputProps }: Props) {
   const colors = useColors();
   const styles = getStyles(colors);
   const [enfocado, setEnfocado] = useState(false);
+  // Si el campo es de contraseña, se puede alternar a texto plano — sin
+  // esto, un error de tecleo en el registro no se detecta hasta enviarlo.
+  const [mostrarTexto, setMostrarTexto] = useState(false);
+  const esContrasena = secureTextEntry === true;
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
+      <View
         style={[
-          styles.input,
-          enfocado && !error && styles.inputEnfocado,
-          error && styles.inputError,
-          style,
+          styles.fila,
+          enfocado && !error && styles.filaEnfocada,
+          error && styles.filaError,
         ]}
-        placeholderTextColor={colors.textSecondary}
-        autoCapitalize="none"
-        onFocus={(e) => {
-          setEnfocado(true);
-          onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setEnfocado(false);
-          onBlur?.(e);
-        }}
-        {...inputProps}
-      />
+      >
+        <TextInput
+          style={[styles.input, style]}
+          placeholderTextColor={colors.textSecondary}
+          autoCapitalize="none"
+          secureTextEntry={esContrasena && !mostrarTexto}
+          onFocus={(e) => {
+            setEnfocado(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setEnfocado(false);
+            onBlur?.(e);
+          }}
+          {...inputProps}
+        />
+        {esContrasena && (
+          <Pressable onPress={() => setMostrarTexto(!mostrarTexto)} hitSlop={8}>
+            <Ionicons
+              name={mostrarTexto ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+        )}
+      </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
@@ -50,11 +68,23 @@ function getStyles(colors: Colors) {
       ...typography.caption,
       color: colors.textSecondary,
     },
-    input: {
+    fila: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
       minHeight: 48,
-      paddingVertical: spacing.xs,
       borderBottomWidth: 1.5,
       borderColor: colors.border,
+    },
+    filaEnfocada: {
+      borderColor: colors.accent,
+    },
+    filaError: {
+      borderColor: colors.error,
+    },
+    input: {
+      flex: 1,
+      paddingVertical: spacing.xs,
       paddingHorizontal: 0,
       backgroundColor: 'transparent',
       color: colors.textPrimary,
@@ -63,12 +93,6 @@ function getStyles(colors: Colors) {
       // iOS/Android, ahí no existe ese estilo.
       outlineStyle: 'none',
       ...typography.body,
-    },
-    inputEnfocado: {
-      borderColor: colors.accent,
-    },
-    inputError: {
-      borderColor: colors.error,
     },
     error: {
       ...typography.caption,

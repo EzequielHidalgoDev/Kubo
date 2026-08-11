@@ -58,8 +58,8 @@ export function EditBucketScreen({ bucket, onGuardado, onCancelar }: Props) {
         ...(strategy === 'FIXED' ? { fixed_amount_cents: centimos } : { target_cents: centimos }),
       });
       onGuardado();
-    } catch {
-      setError('No se pudo guardar el cambio');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el cambio');
     } finally {
       setCargando(false);
     }

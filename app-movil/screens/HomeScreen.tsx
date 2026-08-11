@@ -144,8 +144,8 @@ export function HomeScreen() {
       const token = await getToken();
       await borrarBucket(token, id);
       await cargarBuckets();
-    } catch {
-      setError('No se pudo borrar el bucket (¿tiene ya movimientos?)');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo borrar el bucket');
     }
   }
 
@@ -158,8 +158,8 @@ export function HomeScreen() {
       await editarBucket(token, bucket.id, construirCambiosConPrioridad(bucket, otro.priority));
       await editarBucket(token, otro.id, construirCambiosConPrioridad(otro, bucket.priority));
       await cargarBuckets();
-    } catch {
-      setError('No se pudo cambiar el orden');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cambiar el orden');
     }
   }
 

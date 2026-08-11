@@ -63,8 +63,8 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
         ...(strategy === 'FIXED' ? { fixed_amount_cents: centimos } : { target_cents: centimos }),
       });
       onCreado();
-    } catch {
-      setError('No se pudo crear el bucket (¿ya existe uno con ese nombre?)');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear el bucket');
     } finally {
       setCargando(false);
     }

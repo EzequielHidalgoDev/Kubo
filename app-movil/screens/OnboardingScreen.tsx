@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
@@ -82,9 +82,11 @@ export function OnboardingScreen({ onListo }: Props) {
       for (const bucket of sugerencia) {
         await crearBucket(token, bucket);
       }
-      onListo();
-    } catch {
-      setError('No se pudieron crear tus buckets, inténtalo de nuevo');
+      Alert.alert('Ya estás organizado', 'Tus buckets están listos. Cuando metas tu ingreso en "Repartir", se reparte solo.', [
+        { text: 'Entendido', onPress: onListo },
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudieron crear tus buckets, inténtalo de nuevo');
     } finally {
       setCargando(false);
     }

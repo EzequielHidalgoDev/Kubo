@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
@@ -38,9 +38,11 @@ export function RetirarScreen({ bucket, onRetirado, onCancelar }: Props) {
     try {
       const token = await getToken();
       await retirarDeBucket(token, bucket.id, centimos);
-      onRetirado();
-    } catch {
-      setError('No se pudo registrar el retiro');
+      Alert.alert('Retirado', `Se han retirado ${formatearCentimos(centimos)} de ${bucket.name}.`, [
+        { text: 'OK', onPress: onRetirado },
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo registrar el retiro');
     } finally {
       setCargando(false);
     }
