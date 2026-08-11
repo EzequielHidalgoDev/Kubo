@@ -31,6 +31,9 @@ export function TabBar({ activa, onCambiar, avisoInicio }: Props) {
               key={tab.id}
               onPress={() => onCambiar(tab.id)}
               style={({ pressed }) => [styles.item, pressed && styles.itemPulsado]}
+              accessibilityRole="tab"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected: seleccionada }}
             >
               <View>
                 <Ionicons

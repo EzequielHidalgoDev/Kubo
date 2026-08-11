@@ -19,7 +19,12 @@ export function PreguntaAyuda({ pregunta, children }: Props) {
   const [abierta, setAbierta] = useState(false);
 
   return (
-    <Pressable onPress={() => setAbierta(!abierta)} style={styles.fila}>
+    <Pressable
+      onPress={() => setAbierta(!abierta)}
+      style={styles.fila}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: abierta }}
+    >
       <View style={styles.cabecera}>
         <Text style={styles.pregunta}>{pregunta}</Text>
         <Ionicons
