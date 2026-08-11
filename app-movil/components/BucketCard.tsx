@@ -1,9 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Bucket } from '../lib/api';
 import { formatearCentimos } from '../lib/money';
 import { Colors, radius, spacing, typography, useColors } from '../theme';
 import { LinkText } from './LinkText';
+
+// Mismo texto que ya se explica una vez en CreateBucketScreen al elegir la
+// estrategia — aquí se repite junto al "Objetivo"/"Importe fijo" de cada
+// tarjeta, que es donde alguien que no recuerda qué significa esa etiqueta
+// realmente la necesita, no solo al crear el bucket.
+const EXPLICACION_ESTRATEGIA: Record<Bucket['strategy'], string> = {
+  FIXED: 'Se le asigna siempre la misma cantidad cada mes.',
+  DEBT: 'Se le va destinando dinero hasta saldarla del todo; luego para.',
+  FILL_TO_TARGET: 'Se le va rellenando hasta llegar al objetivo, y luego para.',
+  REMAINDER: 'Recibe lo que sobra cada mes, después de todo lo demás.',
+};
 
 type Props = {
   bucket: Bucket;
@@ -29,6 +41,7 @@ export function BucketCard({
 }: Props) {
   const colors = useColors();
   const styles = getStyles(colors);
+  const [explicacionAbierta, setExplicacionAbierta] = useState(false);
   // El "objetivo" de un bucket depende de su estrategia: FILL_TO_TARGET y
   // DEBT tienen un objetivo a alcanzar (ahorro o deuda total), FIXED tiene
   // un importe fijo mensual, REMAINDER no tiene ninguno de los dos (se
@@ -106,14 +119,26 @@ export function BucketCard({
       )}
 
       <View style={styles.pie}>
-        {objetivo !== null && (
-          <Text style={styles.detalle}>
-            {bucket.strategy === 'FIXED'
-              ? `Importe fijo: ${formatearCentimos(objetivo)}`
-              : bucket.strategy === 'DEBT'
-              ? `Deuda total: ${formatearCentimos(objetivo)}`
-              : `Objetivo: ${formatearCentimos(objetivo)}`}
-          </Text>
+        {objetivo !== null ? (
+          <Pressable
+            style={styles.filaDetalle}
+            onPress={() => setExplicacionAbierta(!explicacionAbierta)}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Qué significa esta estrategia"
+            accessibilityState={{ expanded: explicacionAbierta }}
+          >
+            <Text style={styles.detalle}>
+              {bucket.strategy === 'FIXED'
+                ? `Importe fijo: ${formatearCentimos(objetivo)}`
+                : bucket.strategy === 'DEBT'
+                ? `Deuda total: ${formatearCentimos(objetivo)}`
+                : `Objetivo: ${formatearCentimos(objetivo)}`}
+            </Text>
+            <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
+          </Pressable>
+        ) : (
+          <View />
         )}
         <View style={styles.acciones}>
           {onRetirar && bucket.strategy !== 'FIXED' && bucket.strategy !== 'DEBT' && (
@@ -124,6 +149,10 @@ export function BucketCard({
         </View>
       </View>
 
+      {explicacionAbierta && objetivo !== null && (
+        <Text style={styles.consejo}>{EXPLICACION_ESTRATEGIA[bucket.strategy]}</Text>
+      )}
+
       {bucket.id === 'colchon' && (
         <Text style={styles.consejo}>
           Consejo: mejor en una cuenta remunerada que parado sin más.
@@ -132,8 +161,8 @@ export function BucketCard({
 
       {sinAcciones && (
         <Text style={styles.consejo}>
-          Se compone de dos partes internas (para priorizar tu deuda entre medias) y no se
-          edita como una sola desde aquí.
+          Se reparte en dos momentos distintos de la cascada (antes y después de tu deuda) y no
+          se edita como una sola tarjeta desde aquí.
         </Text>
       )}
 
@@ -218,6 +247,11 @@ function getStyles(colors: Colors) {
       flexDirection: 'row',
       gap: spacing.md,
     },
+    filaDetalle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
     detalle: {
       ...typography.caption,
       color: colors.textSecondary,
@@ -232,7 +266,7 @@ function getStyles(colors: Colors) {
     saldada: {
       ...typography.caption,
       fontSize: 12,
-      color: colors.accent,
+      color: colors.accentText,
     },
   });
 }

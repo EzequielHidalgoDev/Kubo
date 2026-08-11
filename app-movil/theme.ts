@@ -21,6 +21,11 @@ const lightColors = {
   navyPressed: '#0A1530',
 
   accent: '#22C58B', // Emerald: reservado para detalles puntuales (progreso, cifras positivas)
+  // El Emerald de "accent" da ~2.2:1 sobre fondo claro, muy por debajo del
+  // 4.5:1 que pide WCAG AA para texto: para usarlo como texto o borde en
+  // modo claro hace falta esta versión más oscura. En oscuro el propio
+  // "accent" ya tiene contraste de sobra, así que ahí valen los dos igual.
+  accentText: '#0F7A54',
 
   error: '#DC2626',
 } as const;
@@ -40,6 +45,7 @@ const darkColors = {
   navyPressed: '#28335A',
 
   accent: '#22C58B', // el mismo verde funciona en los dos modos
+  accentText: '#22C58B', // aquí sí tiene contraste de sobra sobre el fondo oscuro
   error: '#EF4444',
 } as const;
 

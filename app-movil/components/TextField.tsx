@@ -88,7 +88,7 @@ function getStyles(colors: Colors) {
       borderColor: colors.border,
     },
     filaEnfocada: {
-      borderColor: colors.accent,
+      borderColor: colors.accentText,
     },
     filaError: {
       borderColor: colors.error,

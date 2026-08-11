@@ -109,14 +109,14 @@ function getStyles(colors: Colors) {
     tarjetaTotales: {
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.accent,
+      borderColor: colors.accentText,
       borderRadius: radius.lg,
       padding: spacing.md,
       gap: spacing.xs,
     },
     filaTotalImporte: {
       ...typography.bodyMedium,
-      color: colors.accent,
+      color: colors.accentText,
     },
     tarjeta: {
       backgroundColor: colors.surface,

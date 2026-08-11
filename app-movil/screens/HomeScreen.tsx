@@ -86,6 +86,7 @@ export function HomeScreen() {
   // fijos y tu deuda siguen siendo correctos (el colchón depende de esa
   // cifra, y casi nadie la actualiza sola). Se puede descartar por hoy.
   const [mesesUsados, setMesesUsados] = useState(0);
+  const [historialCargado, setHistorialCargado] = useState(false);
   const [revisionDescartada, setRevisionDescartada] = useState(false);
   const mostrarRevision = mesesUsados > 0 && mesesUsados % 3 === 0 && !revisionDescartada;
 
@@ -122,6 +123,8 @@ export function HomeScreen() {
       setMesesUsados(historial.length);
     } catch (err) {
       console.error('Error al comprobar los meses de uso:', err);
+    } finally {
+      setHistorialCargado(true);
     }
   }, [getToken]);
 
@@ -185,6 +188,13 @@ export function HomeScreen() {
       setIngreso('');
       setRepartidoEsteMes(true); // bloquea el formulario hasta el mes que viene
       await cargarBuckets(); // los saldos de las tarjetas de abajo se actualizan solos
+      // Repartir es la acción que cumple la promesa central de Kubo (el
+      // dinero se organiza solo, sin que tengas que revisar nada después):
+      // merece la misma confirmación explícita que ya tienen retirar y el
+      // alta de buckets en el onboarding, no solo un cambio de texto discreto.
+      Alert.alert('Repartido', 'Tu ingreso ya está organizado entre tus buckets.', [
+        { text: 'OK' },
+      ]);
     } catch (err) {
       setErrorReparto(err instanceof Error ? err.message : 'No se pudo calcular el reparto');
     } finally {
@@ -233,7 +243,17 @@ export function HomeScreen() {
 
   // Primera vez del usuario: en vez de crear buckets a ciegas, le
   // preguntamos su ingreso y gastos fijos para sugerirle un reparto real.
-  if (yaCargado && !cargando && buckets.length === 0 && !error) {
+  // Solo cuenta como "primera vez" si tampoco tiene historial: si no, es
+  // alguien que ya usaba Kubo y borró su último bucket, y mandarlo de
+  // vuelta a "Paso 1 de 2" como si nunca hubiera entrado sería confuso.
+  if (
+    yaCargado &&
+    historialCargado &&
+    !cargando &&
+    buckets.length === 0 &&
+    mesesUsados === 0 &&
+    !error
+  ) {
     return <OnboardingScreen onListo={cargarBuckets} />;
   }
 
