@@ -43,7 +43,11 @@ const darkColors = {
   error: '#EF4444',
 } as const;
 
-export type Colors = typeof lightColors;
+// No se usa "typeof lightColors" directamente: al llevar "as const", cada
+// color quedaría tipado como su valor hexadecimal exacto, y entonces
+// darkColors (con hex distintos) no encajaría en el tipo. Aquí solo importan
+// las claves, no los valores concretos.
+export type Colors = { [K in keyof typeof lightColors]: string };
 
 // Lee el esquema de color del sistema operativo (o del navegador, en web,
 // vía prefers-color-scheme) y devuelve la paleta que toca. Los estilos de
