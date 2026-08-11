@@ -53,14 +53,26 @@ export function BucketCard({
         <View style={styles.filaNombre}>
           {puedeReordenar && (
             <View style={styles.flechas}>
-              <Pressable onPress={onSubir} disabled={!onSubir} hitSlop={6}>
+              {/* Las dos flechas están pegadas (1px de gap) para no ocupar
+                  toda la tarjeta: el hitSlop crece hacia fuera (arriba/abajo/
+                  izquierda), donde no hay otro control, y se queda corto
+                  hacia el centro para que no se solape con la de al lado. */}
+              <Pressable
+                onPress={onSubir}
+                disabled={!onSubir}
+                hitSlop={{ top: 14, bottom: 6, left: 14, right: 10 }}
+              >
                 <Ionicons
                   name="chevron-up"
                   size={16}
                   color={onSubir ? colors.textSecondary : colors.border}
                 />
               </Pressable>
-              <Pressable onPress={onBajar} disabled={!onBajar} hitSlop={6}>
+              <Pressable
+                onPress={onBajar}
+                disabled={!onBajar}
+                hitSlop={{ top: 6, bottom: 14, left: 14, right: 10 }}
+              >
                 <Ionicons
                   name="chevron-down"
                   size={16}

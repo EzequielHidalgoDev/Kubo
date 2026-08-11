@@ -9,6 +9,7 @@ import { ClerkProvider, SignedIn, SignedOut } from '@clerk/clerk-expo';
 import { esES } from '@clerk/localizations';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
+import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
@@ -58,6 +59,9 @@ export default function App() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  // En oscuro los iconos de la barra de estado (hora, batería) tienen que
+  // ser claros: fijarlos siempre a "dark" los deja invisibles ahí.
+  const esquemaOscuro = useColorScheme() === 'dark';
 
   if (!fontsLoaded) return null;
 
@@ -69,7 +73,7 @@ export default function App() {
     >
       <SafeAreaProvider>
         <AuthGate />
-        <StatusBar style="dark" />
+        <StatusBar style={esquemaOscuro ? 'light' : 'dark'} />
       </SafeAreaProvider>
     </ClerkProvider>
   );
