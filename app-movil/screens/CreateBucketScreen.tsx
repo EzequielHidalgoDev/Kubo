@@ -33,6 +33,12 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
       setError('Ponle un nombre al bucket');
       return;
     }
+    if (!slugify(nombre)) {
+      // Un nombre hecho solo de emoji o símbolos no deja ninguna letra ni
+      // número: el identificador interno saldría vacío.
+      setError('El nombre tiene que incluir alguna letra o número');
+      return;
+    }
     const centimos = parseEurosACentimos(importe);
     if (centimos === null || centimos <= 0) {
       setError(

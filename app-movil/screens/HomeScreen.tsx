@@ -71,6 +71,9 @@ export function HomeScreen() {
   const [creandoBucket, setCreandoBucket] = useState(false);
   const [editandoBucket, setEditandoBucket] = useState<Bucket | null>(null);
   const [retirandoDeBucket, setRetirandoDeBucket] = useState<Bucket | null>(null);
+  // Evita que tocar dos veces seguidas una flecha de reordenar mande dos
+  // intercambios de prioridad a la vez y los deje en un estado inconsistente.
+  const [reordenando, setReordenando] = useState(false);
 
   const [ingreso, setIngreso] = useState('');
   const [errorReparto, setErrorReparto] = useState('');
@@ -153,6 +156,8 @@ export function HomeScreen() {
   // decidir "esta deuda antes que ese objetivo" desde la app — la cascada
   // de reparto ya lo soportaba, pero no había forma de tocarla desde aquí.
   async function handleReordenar(bucket: Bucket, otro: Bucket) {
+    if (reordenando) return;
+    setReordenando(true);
     try {
       const token = await getToken();
       await editarBucket(token, bucket.id, construirCambiosConPrioridad(bucket, otro.priority));
@@ -160,6 +165,8 @@ export function HomeScreen() {
       await cargarBuckets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el orden');
+    } finally {
+      setReordenando(false);
     }
   }
 
@@ -343,8 +350,8 @@ export function HomeScreen() {
                 onEditar={() => setEditandoBucket(item)}
                 onBorrar={() => handleBorrar(item)}
                 onRetirar={() => setRetirandoDeBucket(item)}
-                onSubir={puedeSubir ? () => handleReordenar(item, anterior) : undefined}
-                onBajar={puedeBajar ? () => handleReordenar(item, siguiente) : undefined}
+                onSubir={puedeSubir && !reordenando ? () => handleReordenar(item, anterior) : undefined}
+                onBajar={puedeBajar && !reordenando ? () => handleReordenar(item, siguiente) : undefined}
               />
             );
           })}

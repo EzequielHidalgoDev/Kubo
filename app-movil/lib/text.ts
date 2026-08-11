@@ -9,6 +9,9 @@ export function slugify(texto: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
+  // Puede devolver '' si el texto no tiene ninguna letra ni número (solo
+  // emoji o símbolos) — quien llame a esto debe comprobarlo antes de
+  // usarlo como id, en vez de mandar un id vacío a la API.
 }
 
 // "agosto 2026" -> "Agosto 2026". Se usa para dejar claro que el reparto

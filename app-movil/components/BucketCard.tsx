@@ -69,12 +69,14 @@ export function BucketCard({
               </Pressable>
             </View>
           )}
-          <Text style={styles.nombre}>
+          <Text style={styles.nombre} numberOfLines={1} ellipsizeMode="tail">
             {orden !== undefined && <Text style={styles.orden}>{orden}º </Text>}
             {bucket.name}
           </Text>
         </View>
-        <Text style={styles.saldo}>{formatearCentimos(bucket.balance_cents)}</Text>
+        <Text style={styles.saldo} numberOfLines={1}>
+          {formatearCentimos(bucket.balance_cents)}
+        </Text>
       </View>
 
       {progreso !== null && (

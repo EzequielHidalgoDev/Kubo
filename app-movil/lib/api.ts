@@ -7,14 +7,22 @@ export async function apiFetch<T>(
   token: string | null,
   options: RequestInit = {}
 ): Promise<T> {
-  const respuesta = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  let respuesta: Response;
+  try {
+    respuesta = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    // fetch() solo lanza aquí cuando la petición ni siquiera llega a un
+    // servidor (sin conexión, API caída): un mensaje técnico como "Failed
+    // to fetch" no le dice nada al usuario.
+    throw new Error('Sin conexión. Comprueba tu internet e inténtalo de nuevo.');
+  }
 
   if (!respuesta.ok) {
     const cuerpo = await respuesta.json().catch(() => ({}));
