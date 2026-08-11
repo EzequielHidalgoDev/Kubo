@@ -62,6 +62,9 @@ export function BucketCard({
                 disabled={!onSubir}
                 hitSlop={{ top: 14, bottom: 6, left: 14, right: 10 }}
                 style={({ pressed }) => pressed && onSubir && styles.flechaPulsada}
+                accessibilityRole="button"
+                accessibilityLabel={`Subir prioridad de ${bucket.name}`}
+                accessibilityState={{ disabled: !onSubir }}
               >
                 <Ionicons
                   name="chevron-up"
@@ -74,6 +77,9 @@ export function BucketCard({
                 disabled={!onBajar}
                 hitSlop={{ top: 6, bottom: 14, left: 14, right: 10 }}
                 style={({ pressed }) => pressed && onBajar && styles.flechaPulsada}
+                accessibilityRole="button"
+                accessibilityLabel={`Bajar prioridad de ${bucket.name}`}
+                accessibilityState={{ disabled: !onBajar }}
               >
                 <Ionicons
                   name="chevron-down"
@@ -150,6 +156,11 @@ function getStyles(colors: Colors) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      // space-between no deja hueco mínimo cuando no sobra sitio: con un
+      // nombre muy largo en pantallas estrechas (375px), el "..." del
+      // truncado tocaba directamente con el importe. Este gap fuerza un
+      // margen aunque el ancho esté muy justo.
+      gap: spacing.sm,
     },
     filaNombre: {
       flexDirection: 'row',
