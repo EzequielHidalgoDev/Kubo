@@ -33,7 +33,7 @@ export function HistorialScreen() {
       setBuckets(listaBuckets);
     } catch (err) {
       console.error('Error al cargar el historial:', err);
-      setError('No se pudo cargar el historial');
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el historial');
     } finally {
       setCargando(false);
     }

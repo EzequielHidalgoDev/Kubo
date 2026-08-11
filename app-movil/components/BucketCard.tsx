@@ -142,6 +142,9 @@ function getStyles(colors: Colors) {
       alignItems: 'center',
       gap: spacing.xs,
       flexShrink: 1,
+      // Sin esto, en web un hijo flex no se encoge por debajo del ancho de
+      // su contenido: el nombre largo empujaba el saldo en vez de truncarse.
+      minWidth: 0,
     },
     flechas: {
       gap: 1,
@@ -153,10 +156,19 @@ function getStyles(colors: Colors) {
     nombre: {
       ...typography.bodyMedium,
       color: colors.textPrimary,
+      flexShrink: 1,
+      // El minWidth:0 del contenedor no basta: en web, el propio texto (con
+      // white-space:nowrap por el numberOfLines=1) sigue midiendo su ancho
+      // de contenido completo si no se le quita aquí también.
+      minWidth: 0,
     },
     saldo: {
       ...typography.bodyMedium,
       color: colors.textPrimary,
+      // Sin esto, en web el saldo se encoge a la vez que el nombre (el
+      // valor por defecto de flex-shrink ahí es 1, no 0 como en RN nativo)
+      // y el importe también queda cortado.
+      flexShrink: 0,
     },
     pistaProgreso: {
       height: 6,

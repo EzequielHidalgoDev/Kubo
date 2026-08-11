@@ -97,7 +97,7 @@ export function HomeScreen() {
       setBuckets(datos);
     } catch (err) {
       console.error('Error al cargar buckets:', err);
-      setError('No se pudieron cargar tus buckets');
+      setError(err instanceof Error ? err.message : 'No se pudieron cargar tus buckets');
     } finally {
       setCargando(false);
       setYaCargado(true);
@@ -185,8 +185,8 @@ export function HomeScreen() {
       setIngreso('');
       setRepartidoEsteMes(true); // bloquea el formulario hasta el mes que viene
       await cargarBuckets(); // los saldos de las tarjetas de abajo se actualizan solos
-    } catch {
-      setErrorReparto('No se pudo calcular el reparto');
+    } catch (err) {
+      setErrorReparto(err instanceof Error ? err.message : 'No se pudo calcular el reparto');
     } finally {
       setRepartiendo(false);
     }
