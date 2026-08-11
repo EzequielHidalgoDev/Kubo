@@ -27,7 +27,11 @@ export function TabBar({ activa, onCambiar, avisoInicio }: Props) {
         {TABS.map((tab) => {
           const seleccionada = tab.id === activa;
           return (
-            <Pressable key={tab.id} onPress={() => onCambiar(tab.id)} style={styles.item}>
+            <Pressable
+              key={tab.id}
+              onPress={() => onCambiar(tab.id)}
+              style={({ pressed }) => [styles.item, pressed && styles.itemPulsado]}
+            >
               <View>
                 <Ionicons
                   name={seleccionada ? tab.icono : (`${tab.icono}-outline` as keyof typeof Ionicons.glyphMap)}
@@ -68,6 +72,9 @@ function getStyles(colors: Colors) {
       flex: 1,
       alignItems: 'center',
       gap: 2,
+    },
+    itemPulsado: {
+      opacity: 0.5,
     },
     label: {
       ...typography.caption,

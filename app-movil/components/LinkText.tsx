@@ -12,7 +12,9 @@ export function LinkText({ label, onPress }: Props) {
 
   return (
     <Pressable onPress={onPress} hitSlop={8}>
-      <Text style={styles.text}>{label}</Text>
+      {({ pressed }) => (
+        <Text style={[styles.text, pressed && styles.textPulsado]}>{label}</Text>
+      )}
     </Pressable>
   );
 }
@@ -23,6 +25,9 @@ function getStyles(colors: Colors) {
       ...typography.caption,
       color: colors.textSecondary,
       textDecorationLine: 'underline',
+    },
+    textPulsado: {
+      opacity: 0.5,
     },
   });
 }

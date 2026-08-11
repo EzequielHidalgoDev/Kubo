@@ -61,6 +61,7 @@ export function BucketCard({
                 onPress={onSubir}
                 disabled={!onSubir}
                 hitSlop={{ top: 14, bottom: 6, left: 14, right: 10 }}
+                style={({ pressed }) => pressed && onSubir && styles.flechaPulsada}
               >
                 <Ionicons
                   name="chevron-up"
@@ -72,6 +73,7 @@ export function BucketCard({
                 onPress={onBajar}
                 disabled={!onBajar}
                 hitSlop={{ top: 6, bottom: 14, left: 14, right: 10 }}
+                style={({ pressed }) => pressed && onBajar && styles.flechaPulsada}
               >
                 <Ionicons
                   name="chevron-down"
@@ -160,6 +162,9 @@ function getStyles(colors: Colors) {
     },
     flechas: {
       gap: 1,
+    },
+    flechaPulsada: {
+      opacity: 0.4,
     },
     orden: {
       ...typography.caption,
