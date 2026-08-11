@@ -51,7 +51,12 @@ export function TextField({ label, error, style, onFocus, onBlur, secureTextEntr
           {...inputProps}
         />
         {esContrasena && (
-          <Pressable onPress={() => setMostrarTexto(!mostrarTexto)} hitSlop={8}>
+          <Pressable
+            onPress={() => setMostrarTexto(!mostrarTexto)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={mostrarTexto ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          >
             <Ionicons
               name={mostrarTexto ? 'eye-off-outline' : 'eye-outline'}
               size={20}
