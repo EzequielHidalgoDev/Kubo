@@ -12,12 +12,13 @@ import {
   CambiosBucket,
   editarBucket,
   ejecutarReparto,
+  HistorialMes,
   listarBuckets,
   obtenerHistorial,
   obtenerUltimoReparto,
 } from '../lib/api';
 import { fusionarColchon } from '../lib/buckets';
-import { parseEurosACentimos } from '../lib/money';
+import { formatearCentimos, parseEurosACentimos } from '../lib/money';
 import { esDelMesActual, mesActual, primerDiaProximoMes } from '../lib/text';
 import { Colors, radius, spacing, typography, useColors } from '../theme';
 import { AyudaScreen } from './AyudaScreen';
@@ -90,6 +91,10 @@ export function HomeScreen() {
   // cifra, y casi nadie la actualiza sola). Se puede descartar por hoy.
   const [mesesUsados, setMesesUsados] = useState(0);
   const [historialCargado, setHistorialCargado] = useState(false);
+  // Desglose real del reparto de este mes (cuánto fue a cada bucket): sin
+  // esto, la única forma de saber "cuánto puedo invertir/gastar" era bajar
+  // y sumar tarjeta a tarjeta a mano.
+  const [desgloseMesActual, setDesgloseMesActual] = useState<HistorialMes | null>(null);
   const [revisionDescartada, setRevisionDescartada] = useState(false);
   const mostrarRevision = mesesUsados > 0 && mesesUsados % 3 === 0 && !revisionDescartada;
 
@@ -124,6 +129,11 @@ export function HomeScreen() {
       const token = await getToken();
       const historial = await obtenerHistorial(token);
       setMesesUsados(historial.length);
+      const hoy = new Date();
+      const mesActualEntry = historial.find(
+        (m) => m.year === hoy.getFullYear() && m.month === hoy.getMonth() + 1
+      );
+      setDesgloseMesActual(mesActualEntry ?? null);
     } catch (err) {
       console.error('Error al comprobar los meses de uso:', err);
     } finally {
@@ -191,6 +201,7 @@ export function HomeScreen() {
       setIngreso('');
       setRepartidoEsteMes(true); // bloquea el formulario hasta el mes que viene
       await cargarBuckets(); // los saldos de las tarjetas de abajo se actualizan solos
+      await cargarMesesUsados(); // trae el desglose recién hecho para mostrarlo abajo
       // Repartir es la acción que cumple la promesa central de Kubo (el
       // dinero se organiza solo, sin que tengas que revisar nada después):
       // merece la misma confirmación explícita que ya tienen retirar y el
@@ -289,6 +300,18 @@ export function HomeScreen() {
             <Text style={styles.subtituloReparto}>
               Podrás volver a repartir el {primerDiaProximoMes()}.
             </Text>
+            {desgloseMesActual && (
+              <View style={styles.desglose}>
+                {desgloseMesActual.allocations.map((a) => (
+                  <View key={a.bucket_id} style={styles.filaDesglose}>
+                    <Text style={styles.filaDesgloseNombre}>{a.bucket_name}</Text>
+                    <Text style={styles.filaDesgloseImporte}>
+                      {formatearCentimos(a.amount_cents)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         ) : (
           <>
@@ -424,6 +447,22 @@ function getStyles(colors: Colors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
+    },
+    desglose: {
+      marginTop: spacing.xs,
+      gap: 2,
+    },
+    filaDesglose: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    filaDesgloseNombre: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    filaDesgloseImporte: {
+      ...typography.caption,
+      color: colors.textPrimary,
     },
     tituloReparto: {
       ...typography.title,
