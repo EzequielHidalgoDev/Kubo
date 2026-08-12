@@ -34,7 +34,7 @@ A diferencia de apps de categorización de gastos (tipo Fintonic), que analizan 
 - Motor de reparto en cascada con prioridades: los buckets de la misma prioridad se reparten en paralelo/proporcional; prioridades distintas se sirven en cascada estricta.
 - Ledger append-only: los movimientos nunca se editan, solo se añaden (incluye "retirar" como movimiento negativo para buckets de ahorro, no disponible en buckets de importe fijo ni de deuda).
 - Sin seguimiento de transacciones reales ni conexión bancaria: Kubo no sabe en qué gasta el usuario el dinero de "libre para gastar", solo se lo asigna.
-- Actualmente no soporta Dark Mode ni Dynamic Type/accesibilidad de texto del sistema operativo.
+- Soporta Dark Mode (`useColorScheme()`, paleta clara/oscura en `theme.ts`) y Dynamic Type con un tope de escalado (`MAX_FONT_SCALE_AJUSTADO`) para que el texto grande del sistema no rompa botones ni la barra de pestañas.
 
 ## Brand Commitments
 
