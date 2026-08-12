@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { GraficoEvolucion } from '../components/GraficoEvolucion';
 import { Screen } from '../components/Screen';
 import { Bucket, HistorialMes, listarBuckets, obtenerHistorial } from '../lib/api';
 import { fusionarColchon } from '../lib/buckets';
@@ -72,6 +73,8 @@ export function HistorialScreen() {
           ))}
         </View>
       )}
+
+      {!cargando && !error && <GraficoEvolucion meses={meses} />}
 
       {meses.map((mes) => (
         <View key={`${mes.year}-${mes.month}`} style={styles.tarjeta}>
