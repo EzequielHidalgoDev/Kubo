@@ -52,7 +52,11 @@ export function RetirarScreen({ bucket, onRetirado, onCancelar }: Props) {
     <Screen>
       <Text style={styles.titulo}>Retirar de {bucket.name}</Text>
       <Text style={styles.subtitulo}>
-        Para cuando has gastado de aquí de verdad. Tienes {formatearCentimos(bucket.balance_cents)}.
+        {bucket.strategy === 'REMAINDER'
+          ? // Inversión no se "gasta": este dinero ya cumplió su función en
+            // Kubo y toca moverlo a donde inviertas de verdad.
+            `Para cuando lo mueves a donde inviertas de verdad. Tienes ${formatearCentimos(bucket.balance_cents)}.`
+          : `Para cuando has gastado de aquí de verdad. Tienes ${formatearCentimos(bucket.balance_cents)}.`}
       </Text>
 
       <TextField
