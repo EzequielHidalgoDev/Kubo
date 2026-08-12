@@ -364,6 +364,12 @@ export function HomeScreen() {
             </Text>
             {desgloseMesActual && (
               <View style={styles.desglose}>
+                <View style={styles.filaIngresoTotal}>
+                  <Text style={styles.filaIngresoTotalNombre}>Ingreso metido</Text>
+                  <Text style={styles.filaIngresoTotalImporte}>
+                    {formatearCentimos(desgloseMesActual.income_cents)}
+                  </Text>
+                </View>
                 {desgloseMesActual.allocations.map((a) => (
                   <View key={a.bucket_id} style={styles.filaDesglose}>
                     <Text style={styles.filaDesgloseNombre}>{a.bucket_name}</Text>
@@ -525,6 +531,19 @@ function getStyles(colors: Colors) {
     desglose: {
       marginTop: spacing.xs,
       gap: 2,
+    },
+    filaIngresoTotal: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 2,
+    },
+    filaIngresoTotalNombre: {
+      ...typography.bodyMedium,
+      color: colors.textPrimary,
+    },
+    filaIngresoTotalImporte: {
+      ...typography.bodyMedium,
+      color: colors.textPrimary,
     },
     filaDesglose: {
       flexDirection: 'row',
