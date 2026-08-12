@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BucketCard } from '../components/BucketCard';
 import { Button } from '../components/Button';
+import { LinkText } from '../components/LinkText';
 import { Screen } from '../components/Screen';
 import { Snackbar } from '../components/Snackbar';
 import { TextField } from '../components/TextField';
@@ -96,6 +97,9 @@ export function HomeScreen() {
   const [ingreso, setIngreso] = useState('');
   const [errorReparto, setErrorReparto] = useState('');
   const [repartiendo, setRepartiendo] = useState(false);
+  // Reabre el formulario aunque ya se haya repartido este mes, para poder
+  // corregir el importe sin tener que ajustar cada bucket a mano.
+  const [corrigiendo, setCorrigiendo] = useState(false);
   // null mientras no sabemos todavía si ya se repartió este mes (evita el
   // parpadeo de mostrar el formulario y luego bloquearlo de golpe).
   const [repartidoEsteMes, setRepartidoEsteMes] = useState<boolean | null>(null);
@@ -260,6 +264,7 @@ export function HomeScreen() {
       const token = await getToken();
       await ejecutarReparto(token, centimos);
       setIngreso('');
+      setCorrigiendo(false);
       setRepartidoEsteMes(true); // bloquea el formulario hasta el mes que viene
       await cargarBuckets(); // los saldos de las tarjetas de abajo se actualizan solos
       await cargarMesesUsados(); // trae el desglose recién hecho para mostrarlo abajo
@@ -353,14 +358,15 @@ export function HomeScreen() {
     <>
     <Screen>
       <View style={[styles.tarjetaReparto, repartidoEsteMes && styles.tarjetaRepartoHecho]}>
-        {repartidoEsteMes ? (
+        {repartidoEsteMes && !corrigiendo ? (
           <>
             <View style={styles.filaRepartoHecho}>
               <Ionicons name="checkmark-circle" size={22} color={colors.accentText} />
               <Text style={styles.tituloReparto}>Ingreso de {mesActual()} organizado</Text>
             </View>
             <Text style={styles.subtituloReparto}>
-              Podrás volver a repartir el {primerDiaProximoMes()}.
+              Como en la vida real, el dinero llega una vez y se reparte una vez: podrás volver a
+              hacerlo el {primerDiaProximoMes()}.
             </Text>
             {desgloseMesActual && (
               <View style={styles.desglose}>
@@ -380,12 +386,25 @@ export function HomeScreen() {
                 ))}
               </View>
             )}
+            {/* Sin esto, equivocarte de cifra significaba ir bucket a
+                bucket ajustando el saldo a mano: repite el mismo reparto,
+                solo que con el importe correcto. */}
+            <LinkText
+              label="¿Cifra equivocada? Corregir"
+              onPress={() => {
+                setIngreso(
+                  desgloseMesActual ? String(desgloseMesActual.income_cents / 100) : ''
+                );
+                setCorrigiendo(true);
+              }}
+            />
           </>
         ) : (
           <>
             <Text style={styles.tituloReparto}>Ingreso de {mesActual()}</Text>
             <Text style={styles.subtituloReparto}>
-              Mételo aquí y se reparte solo entre los buckets de abajo.
+              Se reparte una sola vez al mes, todo junto: si tienes más de un ingreso, súmalo
+              aquí antes de repartir.
             </Text>
             <TextField
               label="Ingreso (€)"
@@ -396,6 +415,17 @@ export function HomeScreen() {
               returnKeyType="go"
               onSubmitEditing={handleRepartir}
             />
+            {corrigiendo && (
+              <Button
+                label="Cancelar"
+                onPress={() => {
+                  setCorrigiendo(false);
+                  setIngreso('');
+                  setErrorReparto('');
+                }}
+                variant="secondary"
+              />
+            )}
             <Button label="Repartir" onPress={handleRepartir} loading={repartiendo} />
           </>
         )}

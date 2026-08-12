@@ -134,6 +134,21 @@ def guardar_reparto(db: Session, user_id: str, income_cents: int) -> AllocationR
     return resultado
 
 
+def borrar_reparto_automatico_del_mes(db: Session, user_id: str) -> None:
+    """Borra los movimientos del reparto automático de este mes (no los
+    retiros ni el saldo inicial, esos no llevan esta nota). Sin esto, volver
+    a repartir el mismo mes (p.ej. al corregir el importe) duplicaría el
+    dinero ya asignado en vez de sustituirlo."""
+    hoy = datetime.now(timezone.utc)
+    inicio_mes = datetime(hoy.year, hoy.month, 1, tzinfo=timezone.utc)
+    db.query(LedgerEntryModel).filter(
+        LedgerEntryModel.user_id == user_id,
+        LedgerEntryModel.note == "reparto automático",
+        LedgerEntryModel.created_at >= inicio_mes,
+    ).delete()
+    db.commit()
+
+
 def recalcular_reparto_del_mes(db: Session, user_id: str) -> None:
     """Si el usuario ya repartió su ingreso este mes, borra ese reparto y lo
     vuelve a calcular con los buckets tal y como están ahora. Así, editar,
@@ -152,14 +167,7 @@ def recalcular_reparto_del_mes(db: Session, user_id: str) -> None:
     if ingreso_mes is None:
         return  # este mes todavía no se ha repartido nada, no hay qué recalcular
 
-    inicio_mes = datetime(hoy.year, hoy.month, 1, tzinfo=timezone.utc)
-    db.query(LedgerEntryModel).filter(
-        LedgerEntryModel.user_id == user_id,
-        LedgerEntryModel.note == "reparto automático",
-        LedgerEntryModel.created_at >= inicio_mes,
-    ).delete()
-    db.commit()
-
+    borrar_reparto_automatico_del_mes(db, user_id)
     guardar_reparto(db, user_id, ingreso_mes.income_cents)
 
 
@@ -353,6 +361,10 @@ def ejecutar_reparto(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ) -> AllocationResultRead:
+    # Si ya se había repartido este mes (el usuario corrige el importe),
+    # se borra ese reparto antes de calcular el nuevo: si no, cada llamada
+    # duplicaría el dinero ya asignado en vez de sustituirlo.
+    borrar_reparto_automatico_del_mes(db, user_id)
     resultado = guardar_reparto(db, user_id, request.income_cents)
 
     # Guardamos qué ingreso se repartió este mes, para poder recalcular el

@@ -252,6 +252,31 @@ def test_allocate_recuerda_saldo_previo_del_colchon(client):
     assert colchon["reached_target"] is False  # 80.000 de 100.000, aún no llega
 
 
+def test_allocate_dos_veces_el_mismo_mes_sustituye_no_duplica(client):
+    # Corregir el importe repartido (mismo mes) no debe sumar el dinero del
+    # reparto anterior al nuevo: el segundo reparto sustituye al primero.
+    client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 100000,
+        },
+    )
+
+    client.post("/allocate", json={"income_cents": 100000})
+    client.post("/allocate", json={"income_cents": 250000})
+
+    bucket = next(b for b in client.get("/buckets").json() if b["id"] == "gastos_fijos")
+    assert bucket["balance_cents"] == 100000  # el fijo no crece con el ingreso, sigue igual
+
+    historial = client.get("/historial").json()
+    assert len(historial) == 1  # sigue siendo un único mes, no dos entradas
+    assert historial[0]["income_cents"] == 250000  # se quedó con el segundo importe
+
+
 def test_ultimo_reparto_null_si_nunca_se_ha_repartido(client):
     respuesta = client.get("/allocate/ultimo")
     assert respuesta.status_code == 200

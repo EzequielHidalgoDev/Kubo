@@ -171,6 +171,10 @@ export function OnboardingScreen({ onListo }: Props) {
         onChangeText={setIngreso}
         keyboardType="decimal-pad"
       />
+      <Text style={styles.ayuda}>
+        Neto, lo que te llega de verdad a la cuenta. Si tienes más de una fuente (nómina,
+        autónomo...), súmalas todas.
+      </Text>
       <TextField
         label="Gastos fijos mensuales (€)"
         value={gastosFijos}
