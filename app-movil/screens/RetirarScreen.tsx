@@ -1,28 +1,27 @@
-import { useAuth } from '@clerk/clerk-expo';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
-import { Bucket, retirarDeBucket } from '../lib/api';
+import { Bucket } from '../lib/api';
 import { formatearCentimos, parseEurosACentimos } from '../lib/money';
 import { Colors, spacing, typography, useColors } from '../theme';
 
 type Props = {
   bucket: Bucket;
-  onRetirado: () => void;
+  // No llama a la API directamente: HomeScreen decide cuándo retirar de
+  // verdad, para poder ofrecer un "deshacer" antes de que la llamada salga.
+  onConfirmar: (centimos: number) => void;
   onCancelar: () => void;
 };
 
-export function RetirarScreen({ bucket, onRetirado, onCancelar }: Props) {
-  const { getToken } = useAuth();
+export function RetirarScreen({ bucket, onConfirmar, onCancelar }: Props) {
   const colors = useColors();
   const styles = getStyles(colors);
   const [importe, setImporte] = useState('');
   const [error, setError] = useState('');
-  const [cargando, setCargando] = useState(false);
 
-  async function handleRetirar() {
+  function handleRetirar() {
     setError('');
     const centimos = parseEurosACentimos(importe);
     if (centimos === null || centimos <= 0) {
@@ -33,19 +32,7 @@ export function RetirarScreen({ bucket, onRetirado, onCancelar }: Props) {
       setError(`No puedes retirar más de ${formatearCentimos(bucket.balance_cents)}`);
       return;
     }
-
-    setCargando(true);
-    try {
-      const token = await getToken();
-      await retirarDeBucket(token, bucket.id, centimos);
-      Alert.alert('Retirado', `Se han retirado ${formatearCentimos(centimos)} de ${bucket.name}.`, [
-        { text: 'OK', onPress: onRetirado },
-      ]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo registrar el retiro');
-    } finally {
-      setCargando(false);
-    }
+    onConfirmar(centimos);
   }
 
   return (
@@ -69,7 +56,7 @@ export function RetirarScreen({ bucket, onRetirado, onCancelar }: Props) {
         onSubmitEditing={handleRetirar}
       />
 
-      <Button label="Retirar" onPress={handleRetirar} loading={cargando} />
+      <Button label="Retirar" onPress={handleRetirar} />
       <Button label="Cancelar" onPress={onCancelar} variant="secondary" />
     </Screen>
   );

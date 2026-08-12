@@ -1,10 +1,11 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BucketCard } from '../components/BucketCard';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
+import { Snackbar } from '../components/Snackbar';
 import { TextField } from '../components/TextField';
 import {
   Bucket,
@@ -16,6 +17,7 @@ import {
   listarBuckets,
   obtenerHistorial,
   obtenerUltimoReparto,
+  retirarDeBucket,
 } from '../lib/api';
 import { fusionarColchon } from '../lib/buckets';
 import { formatearCentimos, parseEurosACentimos } from '../lib/money';
@@ -41,6 +43,16 @@ const ORDEN_VISUAL: Record<string, number> = {
   inversion: 4,
   libre: 5,
 };
+
+// Borrar un bucket o retirar dinero ya no pide confirmación previa: la
+// acción se aplica ya (optimista, en la lista local) y solo llega a la API
+// pasados unos segundos, dando tiempo real a deshacerla — más rápido para
+// quien no se equivoca, sin perder la red de seguridad de quien sí.
+type AccionPendiente =
+  | { tipo: 'borrar'; bucket: Bucket }
+  | { tipo: 'retirar'; bucket: Bucket; centimos: number };
+
+const DURACION_DESHACER_MS = 4000;
 
 function ordenarParaMostrar(buckets: Bucket[]): Bucket[] {
   return [...buckets].sort((a, b) => {
@@ -75,6 +87,8 @@ export function HomeScreen() {
   const [editandoBucket, setEditandoBucket] = useState<Bucket | null>(null);
   const [retirandoDeBucket, setRetirandoDeBucket] = useState<Bucket | null>(null);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
+  const [accionPendiente, setAccionPendiente] = useState<AccionPendiente | null>(null);
+  const timeoutAccionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Evita que tocar dos veces seguidas una flecha de reordenar mande dos
   // intercambios de prioridad a la vez y los deje en un estado inconsistente.
   const [reordenando, setReordenando] = useState(false);
@@ -141,31 +155,78 @@ export function HomeScreen() {
     }
   }, [getToken]);
 
+  // Solo al montar: si "getToken" de Clerk no es referencialmente estable
+  // entre renders, meter estas funciones en las dependencias haría que este
+  // efecto se repitiera con cada cambio de estado — y un cargarBuckets()
+  // de más pisaría cualquier actualización optimista (borrar/retirar con
+  // deshacer) con los datos "viejos" que todavía tiene el servidor.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     cargarBuckets();
     cargarUltimoReparto();
     cargarMesesUsados();
-  }, [cargarBuckets, cargarUltimoReparto, cargarMesesUsados]);
+  }, []);
 
-  function handleBorrar(bucket: Bucket) {
-    Alert.alert(
-      `¿Borrar "${bucket.name}"?`,
-      'No se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Borrar', style: 'destructive', onPress: () => confirmarBorrado(bucket.id) },
-      ]
-    );
-  }
-
-  async function confirmarBorrado(id: string) {
+  async function ejecutarAccionPendiente(accion: AccionPendiente) {
     try {
       const token = await getToken();
-      await borrarBucket(token, id);
+      if (accion.tipo === 'borrar') {
+        await borrarBucket(token, accion.bucket.id);
+      } else {
+        await retirarDeBucket(token, accion.bucket.id, accion.centimos);
+      }
       await cargarBuckets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo borrar el bucket');
+      setError(
+        err instanceof Error
+          ? err.message
+          : accion.tipo === 'borrar'
+          ? 'No se pudo borrar el bucket'
+          : 'No se pudo registrar el retiro'
+      );
+      await cargarBuckets(); // deshace el cambio optimista si la API ha fallado
     }
+  }
+
+  function iniciarAccionPendiente(accion: AccionPendiente) {
+    // No se acumulan ventanas de deshacer: si ya había una acción esperando,
+    // se lanza ya antes de empezar la siguiente.
+    if (accionPendiente && timeoutAccionRef.current) {
+      clearTimeout(timeoutAccionRef.current);
+      ejecutarAccionPendiente(accionPendiente);
+    }
+
+    if (accion.tipo === 'borrar') {
+      setBuckets((prev) => prev.filter((b) => b.id !== accion.bucket.id));
+    } else {
+      setBuckets((prev) =>
+        prev.map((b) =>
+          b.id === accion.bucket.id
+            ? { ...b, balance_cents: b.balance_cents - accion.centimos }
+            : b
+        )
+      );
+    }
+
+    setAccionPendiente(accion);
+    timeoutAccionRef.current = setTimeout(() => {
+      timeoutAccionRef.current = null;
+      setAccionPendiente(null);
+      ejecutarAccionPendiente(accion);
+    }, DURACION_DESHACER_MS);
+  }
+
+  function deshacerAccionPendiente() {
+    if (timeoutAccionRef.current) {
+      clearTimeout(timeoutAccionRef.current);
+      timeoutAccionRef.current = null;
+    }
+    setAccionPendiente(null);
+    cargarBuckets(); // nunca se llegó a llamar a la API: solo hay que refrescar
+  }
+
+  function handleBorrar(bucket: Bucket) {
+    iniciarAccionPendiente({ tipo: 'borrar', bucket });
   }
 
   // Intercambia la prioridad de dos buckets, para que el usuario pueda
@@ -246,9 +307,9 @@ export function HomeScreen() {
     return (
       <RetirarScreen
         bucket={retirandoDeBucket}
-        onRetirado={() => {
+        onConfirmar={(centimos) => {
+          iniciarAccionPendiente({ tipo: 'retirar', bucket: retirandoDeBucket, centimos });
           setRetirandoDeBucket(null);
-          cargarBuckets();
         }}
         onCancelar={() => setRetirandoDeBucket(null)}
       />
@@ -289,6 +350,7 @@ export function HomeScreen() {
   const colchonFusionado = ahorroInversion.find((b) => !buckets.includes(b)) ?? null;
 
   return (
+    <>
     <Screen>
       <View style={[styles.tarjetaReparto, repartidoEsteMes && styles.tarjetaRepartoHecho]}>
         {repartidoEsteMes ? (
@@ -422,6 +484,18 @@ export function HomeScreen() {
         </View>
       )}
     </Screen>
+    {accionPendiente && (
+      <Snackbar
+        mensaje={
+          accionPendiente.tipo === 'borrar'
+            ? `"${accionPendiente.bucket.name}" borrado.`
+            : `Retirado ${formatearCentimos(accionPendiente.centimos)} de "${accionPendiente.bucket.name}".`
+        }
+        etiquetaAccion="Deshacer"
+        onAccion={deshacerAccionPendiente}
+      />
+    )}
+    </>
   );
 }
 

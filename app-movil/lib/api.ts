@@ -1,5 +1,21 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL!;
 
+// El backend casi siempre manda un "detail" legible; esto solo entra en
+// juego cuando no lo hace (p.ej. un 500 sin manejar). "Error 500" no le dice
+// nada a nadie que no sea programador.
+function mensajeGenericoPorEstado(status: number): string {
+  if (status === 401 || status === 403) {
+    return 'Tu sesión ha caducado. Vuelve a entrar.';
+  }
+  if (status === 404) {
+    return 'No se ha encontrado lo que buscabas.';
+  }
+  if (status >= 500) {
+    return 'Ha fallado el servidor. Inténtalo de nuevo en un momento.';
+  }
+  return 'Algo ha ido mal. Inténtalo de nuevo.';
+}
+
 // Cliente mínimo para hablar con la API de Kubo: añade el token de Clerk
 // en cada petición y convierte los errores en excepciones con mensaje.
 export async function apiFetch<T>(
@@ -26,7 +42,7 @@ export async function apiFetch<T>(
 
   if (!respuesta.ok) {
     const cuerpo = await respuesta.json().catch(() => ({}));
-    throw new Error(cuerpo.detail ?? `Error ${respuesta.status}`);
+    throw new Error(cuerpo.detail ?? mensajeGenericoPorEstado(respuesta.status));
   }
 
   // 204 No Content (ej. borrar un bucket) no trae cuerpo que parsear.
