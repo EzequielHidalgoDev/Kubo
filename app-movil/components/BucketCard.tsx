@@ -102,8 +102,15 @@ export function BucketCard({
               </Pressable>
             </View>
           )}
+          {orden !== undefined && (
+            // La cascada de prioridad es lo que hace a Kubo distinto de un
+            // gestor de gastos cualquiera: se merece más presencia que un
+            // número gris, no solo aparecer discretamente.
+            <View style={styles.badgeOrden}>
+              <Text style={styles.badgeOrdenTexto}>{orden}</Text>
+            </View>
+          )}
           <Text style={styles.nombre} numberOfLines={1} ellipsizeMode="tail">
-            {orden !== undefined && <Text style={styles.orden}>{orden}º </Text>}
             {bucket.name}
           </Text>
         </View>
@@ -206,9 +213,22 @@ function getStyles(colors: Colors) {
     flechaPulsada: {
       opacity: 0.4,
     },
-    orden: {
-      ...typography.caption,
-      color: colors.textSecondary,
+    badgeOrden: {
+      minWidth: 20,
+      height: 20,
+      borderRadius: radius.pill,
+      // Tinte del propio Emerald al 15% (sufijo hex de opacidad), no un
+      // color nuevo: se apoya en el mismo acento que ya usa el resto del
+      // sistema, solo que aquí con más protagonismo.
+      backgroundColor: colors.accent + '26',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 5,
+    },
+    badgeOrdenTexto: {
+      fontSize: 11,
+      fontFamily: 'Inter_600SemiBold',
+      color: colors.accentText,
     },
     nombre: {
       ...typography.bodyMedium,
@@ -228,7 +248,10 @@ function getStyles(colors: Colors) {
       flexShrink: 0,
     },
     pistaProgreso: {
-      height: 6,
+      // Un poco más gruesa que antes (6→8): es el motivo visual que más
+      // veces se repite en la app ("cuánto me falta"), se merece más
+      // presencia que un hilo casi invisible.
+      height: 8,
       borderRadius: radius.pill,
       backgroundColor: colors.background,
       overflow: 'hidden',
