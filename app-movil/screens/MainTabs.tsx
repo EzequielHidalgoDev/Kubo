@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Tab, TabBar } from '../components/TabBar';
 import { obtenerUltimoReparto } from '../lib/api';
+import { activarRecordatorioMensual } from '../lib/notificaciones';
 import { esDelMesActual } from '../lib/text';
 import { HistorialScreen } from './HistorialScreen';
 import { HomeScreen } from './HomeScreen';
@@ -28,6 +29,14 @@ export function MainTabs() {
   useEffect(() => {
     comprobarReparto();
   }, [comprobarReparto, tab]);
+
+  // Solo al montar: el punto verde de la pestaña ya avisa dentro de la app,
+  // pero si Kubo lleva cerrado es la única forma real de acordarse.
+  useEffect(() => {
+    activarRecordatorioMensual().catch((err) =>
+      console.error('No se pudo activar el recordatorio mensual:', err)
+    );
+  }, []);
 
   return (
     <View style={styles.contenedor}>
