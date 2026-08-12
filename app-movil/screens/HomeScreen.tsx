@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/clerk-expo';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BucketCard } from '../components/BucketCard';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -19,6 +20,7 @@ import { fusionarColchon } from '../lib/buckets';
 import { parseEurosACentimos } from '../lib/money';
 import { esDelMesActual, mesActual, primerDiaProximoMes } from '../lib/text';
 import { Colors, radius, spacing, typography, useColors } from '../theme';
+import { AyudaScreen } from './AyudaScreen';
 import { CreateBucketScreen } from './CreateBucketScreen';
 import { EditBucketScreen } from './EditBucketScreen';
 import { OnboardingScreen } from './OnboardingScreen';
@@ -71,6 +73,7 @@ export function HomeScreen() {
   const [creandoBucket, setCreandoBucket] = useState(false);
   const [editandoBucket, setEditandoBucket] = useState<Bucket | null>(null);
   const [retirandoDeBucket, setRetirandoDeBucket] = useState<Bucket | null>(null);
+  const [ayudaAbierta, setAyudaAbierta] = useState(false);
   // Evita que tocar dos veces seguidas una flecha de reordenar mande dos
   // intercambios de prioridad a la vez y los deje en un estado inconsistente.
   const [reordenando, setReordenando] = useState(false);
@@ -241,6 +244,10 @@ export function HomeScreen() {
     );
   }
 
+  if (ayudaAbierta) {
+    return <AyudaScreen onCerrar={() => setAyudaAbierta(false)} />;
+  }
+
   // Primera vez del usuario: en vez de crear buckets a ciegas, le
   // preguntamos su ingreso y gastos fijos para sugerirle un reparto real.
   // Solo cuenta como "primera vez" si tampoco tiene historial: si no, es
@@ -272,19 +279,20 @@ export function HomeScreen() {
 
   return (
     <Screen>
-      <View style={styles.tarjetaReparto}>
-        <Text style={styles.tituloReparto}>Ingreso de {mesActual()}</Text>
+      <View style={[styles.tarjetaReparto, repartidoEsteMes && styles.tarjetaRepartoHecho]}>
         {repartidoEsteMes ? (
           <>
+            <View style={styles.filaRepartoHecho}>
+              <Ionicons name="checkmark-circle" size={22} color={colors.accentText} />
+              <Text style={styles.tituloReparto}>Ingreso de {mesActual()} organizado</Text>
+            </View>
             <Text style={styles.subtituloReparto}>
-              Ya repartiste el ingreso de este mes.
-            </Text>
-            <Text style={styles.subtituloReparto}>
-              Podrás volver a hacerlo el {primerDiaProximoMes()}.
+              Podrás volver a repartir el {primerDiaProximoMes()}.
             </Text>
           </>
         ) : (
           <>
+            <Text style={styles.tituloReparto}>Ingreso de {mesActual()}</Text>
             <Text style={styles.subtituloReparto}>
               Mételo aquí y se reparte solo entre los buckets de abajo.
             </Text>
@@ -318,7 +326,20 @@ export function HomeScreen() {
       )}
 
       <View style={styles.filaTitulo}>
-        <Text style={styles.titulo}>Tus buckets</Text>
+        <View style={styles.filaTituloConAyuda}>
+          <Text style={styles.titulo}>Tus buckets</Text>
+          {/* Acceso a la ayuda desde donde de verdad surge la duda ("¿qué es
+              un objetivo?", "¿por qué ese orden?"), no solo enterrada en
+              Perfil. */}
+          <Pressable
+            onPress={() => setAyudaAbierta(true)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Ayuda"
+          >
+            <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />
+          </Pressable>
+        </View>
         <Button label="+ Añadir" onPress={() => setCreandoBucket(true)} variant="secondary" />
       </View>
 
@@ -392,6 +413,18 @@ function getStyles(colors: Colors) {
       gap: spacing.sm,
       marginBottom: spacing.md,
     },
+    // El momento en que el ingreso ya se organizó solo es la promesa
+    // central de Kubo cumplida: se merece un tinte del propio Emerald en
+    // vez de una tarjeta idéntica a la del formulario que sustituye.
+    tarjetaRepartoHecho: {
+      backgroundColor: colors.accent + '14',
+      borderColor: colors.accent + '4D',
+    },
+    filaRepartoHecho: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
     tituloReparto: {
       ...typography.title,
       color: colors.textPrimary,
@@ -418,6 +451,11 @@ function getStyles(colors: Colors) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+    },
+    filaTituloConAyuda: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
     },
     titulo: {
       ...typography.title,
