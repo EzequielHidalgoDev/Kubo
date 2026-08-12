@@ -20,32 +20,42 @@ export function GraficoEvolucion({ meses }: Props) {
   const colors = useColors();
   const styles = getStyles(colors);
 
+  // Sin ningún reparto todavía, HistorialScreen ya muestra su propio aviso
+  // de "todavía no has repartido nada" — este componente no añade nada ahí.
+  if (meses.length === 0) return null;
+
   // Cronológico (antiguo → reciente, como se lee una evolución) y como
   // máximo los últimos N meses para que las barras no se amontonen.
   const ordenado = [...meses].reverse().slice(-MESES_A_MOSTRAR);
   const maximo = Math.max(...ordenado.map((m) => m.income_cents), 1);
 
-  if (ordenado.length < 2) return null; // con un solo mes no hay evolución que enseñar
-
   return (
     <View style={styles.contenedor}>
       <Text style={styles.titulo}>Evolución del ingreso repartido</Text>
-      <View style={styles.filaBarras}>
-        {ordenado.map((mes) => {
-          const alturaPct = Math.max((mes.income_cents / maximo) * 100, 4);
-          return (
-            <View key={`${mes.year}-${mes.month}`} style={styles.columna}>
-              <Text style={styles.importe} numberOfLines={1}>
-                {formatearCentimos(mes.income_cents)}
-              </Text>
-              <View style={styles.pistaBarra}>
-                <View style={[styles.barra, { height: `${alturaPct}%` }]} />
+      {ordenado.length < 2 ? (
+        // Con un solo mes no hay nada que comparar: mejor decirlo que
+        // ocultar la tarjeta entera, que parecería que falta algo.
+        <Text style={styles.textoAunNo}>
+          Vuelve el mes que viene: con dos meses repartidos ya se puede ver si sube o baja.
+        </Text>
+      ) : (
+        <View style={styles.filaBarras}>
+          {ordenado.map((mes) => {
+            const alturaPct = Math.max((mes.income_cents / maximo) * 100, 4);
+            return (
+              <View key={`${mes.year}-${mes.month}`} style={styles.columna}>
+                <Text style={styles.importe} numberOfLines={1}>
+                  {formatearCentimos(mes.income_cents)}
+                </Text>
+                <View style={styles.pistaBarra}>
+                  <View style={[styles.barra, { height: `${alturaPct}%` }]} />
+                </View>
+                <Text style={styles.etiquetaMes}>{NOMBRES_MES_CORTOS[mes.month - 1] ?? ''}</Text>
               </View>
-              <Text style={styles.etiquetaMes}>{NOMBRES_MES_CORTOS[mes.month - 1] ?? ''}</Text>
-            </View>
-          );
-        })}
-      </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -66,6 +76,13 @@ function getStyles(colors: Colors) {
       textTransform: 'uppercase',
       fontSize: 12,
       letterSpacing: 0.5,
+    },
+    textoAunNo: {
+      ...typography.caption,
+      fontSize: 12,
+      fontStyle: 'italic',
+      color: colors.textSecondary,
+      opacity: 0.75,
     },
     filaBarras: {
       flexDirection: 'row',
