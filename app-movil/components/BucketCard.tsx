@@ -54,7 +54,14 @@ export function BucketCard({
       : null;
 
   const progreso = objetivo ? Math.min(bucket.balance_cents / objetivo, 1) : null;
-  const deudaSaldada = bucket.strategy === 'DEBT' && objetivo !== null && bucket.balance_cents >= objetivo;
+  // El motor deja de repartir aquí en cuanto se llega al objetivo, tanto en
+  // FILL_TO_TARGET como en DEBT (mismo cálculo de reached_target en
+  // motor/engine.py) — antes solo se avisaba de esto para la deuda, y un
+  // colchón ya lleno se quedaba mudo sobre por qué no crece más.
+  const objetivoAlcanzado =
+    (bucket.strategy === 'DEBT' || bucket.strategy === 'FILL_TO_TARGET') &&
+    objetivo !== null &&
+    bucket.balance_cents >= objetivo;
   const puedeReordenar = onSubir || onBajar;
   // Solo la tarjeta fusionada del colchón (cuando hay deuda) no tiene
   // ninguna acción: explica por qué, para que no parezca un hueco.
@@ -173,7 +180,13 @@ export function BucketCard({
         </Text>
       )}
 
-      {deudaSaldada && <Text style={styles.saldada}>Deuda saldada. Ya no recibe más dinero.</Text>}
+      {objetivoAlcanzado && (
+        <Text style={styles.saldada}>
+          {bucket.strategy === 'DEBT'
+            ? 'Deuda saldada. Ya no recibe más dinero.'
+            : 'Objetivo alcanzado. Ya no recibe más dinero.'}
+        </Text>
+      )}
     </View>
   );
 }
