@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-expo';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
@@ -29,6 +29,11 @@ export function OnboardingScreen({ onListo }: Props) {
   const [sugerencia, setSugerencia] = useState<NuevoBucket[] | null>(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  // Guarda aparte del estado: React no desactiva el botón al instante (el
+  // re-render con loading=true tarda un frame), así que un doble toque
+  // rápido podía disparar el bucle de creación dos veces y chocar con el
+  // bucket que la primera pasada ya había creado.
+  const creandoRef = useRef(false);
 
   function handleContinuar() {
     setError('');
@@ -74,7 +79,8 @@ export function OnboardingScreen({ onListo }: Props) {
   }
 
   async function handleConfirmar() {
-    if (!sugerencia) return;
+    if (!sugerencia || creandoRef.current) return;
+    creandoRef.current = true;
     setCargando(true);
     setError('');
     try {
@@ -89,6 +95,7 @@ export function OnboardingScreen({ onListo }: Props) {
       setError(err instanceof Error ? err.message : 'No se pudieron crear tus buckets, inténtalo de nuevo');
     } finally {
       setCargando(false);
+      creandoRef.current = false;
     }
   }
 
