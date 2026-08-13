@@ -53,7 +53,12 @@ type AccionPendiente =
   | { tipo: 'borrar'; bucket: Bucket }
   | { tipo: 'retirar'; bucket: Bucket; centimos: number };
 
-const DURACION_DESHACER_MS = 4000;
+// 4s se quedaba corto para alguien que depende de un lector de pantalla:
+// necesita tiempo para que se lo anuncien y decidir, no solo para leerlo.
+// 7s no es cumplimiento pleno de "tiempo ajustable" (WCAG 2.2.1 pide poder
+// extenderlo, no solo alargarlo a ciegas), pero es una mejora real sin
+// complicar el patrón con un temporizador pausable.
+const DURACION_DESHACER_MS = 7000;
 
 function ordenarParaMostrar(buckets: Bucket[]): Bucket[] {
   return [...buckets].sort((a, b) => {

@@ -15,12 +15,26 @@ export function Snackbar({ mensaje, etiquetaAccion, onAccion }: Props) {
   const styles = getStyles(colors);
 
   return (
-    <View style={styles.contenedor} pointerEvents="box-none">
+    <View
+      style={styles.contenedor}
+      pointerEvents="box-none"
+      // Sin esto, un lector de pantalla no se entera de que ha aparecido
+      // este aviso: hay que anunciarlo solo, no esperar a que alguien
+      // "encuentre" un elemento nuevo en pantalla con la ventana de
+      // deshacer ya corriendo.
+      accessibilityLiveRegion="polite"
+      accessibilityRole="alert"
+    >
       <View style={styles.barra}>
         <Text style={styles.mensaje} numberOfLines={2}>
           {mensaje}
         </Text>
-        <Pressable onPress={onAccion} hitSlop={8}>
+        <Pressable
+          onPress={onAccion}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={etiquetaAccion}
+        >
           <Text style={styles.accion}>{etiquetaAccion}</Text>
         </Pressable>
       </View>
