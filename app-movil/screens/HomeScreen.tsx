@@ -479,6 +479,17 @@ export function HomeScreen() {
         </Text>
       )}
 
+      {/* Justo después del onboarding, con los buckets recién creados pero
+          todavía sin repartir, "Gastos fijos: 0€" parece un error en vez de
+          lo esperado. Se ha confundido más de una vez con esto: se explica
+          aquí, no solo arriba en la tarjeta de Repartir. */}
+      {!cargando && !error && !repartidoEsteMes && mesesUsados === 0 && buckets.length > 0 && (
+        <Text style={styles.vacio}>
+          Tus buckets están a 0 € porque todavía no has repartido ningún ingreso. Sube arriba,
+          mete tu ingreso mensual y pulsa "Repartir" para que se llenen.
+        </Text>
+      )}
+
       {!cargando && !error && esteMes.length > 0 && (
         <View style={styles.grupo}>
           <Text style={styles.tituloGrupo}>Este mes</Text>
