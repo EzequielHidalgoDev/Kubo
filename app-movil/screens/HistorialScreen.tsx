@@ -54,12 +54,23 @@ export function HistorialScreen() {
 
       {!cargando && error ? <Text style={styles.error}>{error}</Text> : null}
 
+      {/* Sin nada de contenido debajo, la pantalla se quedaba con un hueco
+          en blanco grande hasta la barra de pestañas (el Screen compartido
+          estira su contenido para llenar el alto disponible). Un mensaje
+          que oriente sobre qué va a aparecer aquí llena ese hueco con algo
+          útil, en vez de dejarlo vacío sin más. */}
       {!cargando && !error && meses.length === 0 && totales.length === 0 && (
-        <Text style={styles.vacio}>Todavía no has repartido ningún ingreso.</Text>
+        <Text style={styles.vacio}>
+          Todavía no has repartido ningún ingreso. En cuanto metas tu sueldo en Inicio y pulses
+          "Repartir", aquí verás mes a mes a dónde ha ido el dinero.
+        </Text>
       )}
 
       {!cargando && !error && meses.length === 0 && totales.length > 0 && (
-        <Text style={styles.vacio}>Todavía no has cerrado ningún mes, pero ya tienes esto ahorrado:</Text>
+        <Text style={styles.vacio}>
+          Todavía no has cerrado ningún mes, pero ya tienes esto ahorrado. En cuanto repartas tu
+          primer ingreso en Inicio, aquí aparecerá el detalle mes a mes.
+        </Text>
       )}
 
       {!cargando && !error && totales.length > 0 && (

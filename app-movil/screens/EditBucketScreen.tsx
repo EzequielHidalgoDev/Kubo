@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -57,7 +57,9 @@ export function EditBucketScreen({ bucket, onGuardado, onCancelar }: Props) {
         priority: bucket.priority,
         ...(strategy === 'FIXED' ? { fixed_amount_cents: centimos } : { target_cents: centimos }),
       });
-      onGuardado();
+      Alert.alert('Cambios guardados', `"${nombre.trim()}" se ha actualizado.`, [
+        { text: 'OK', onPress: onGuardado },
+      ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el cambio');
     } finally {
