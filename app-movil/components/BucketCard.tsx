@@ -164,12 +164,9 @@ export function BucketCard({
       </View>
 
       {explicacionAbierta && objetivo !== null && (
-        <Text style={styles.consejo}>{EXPLICACION_ESTRATEGIA[bucket.strategy]}</Text>
-      )}
-
-      {bucket.id === 'colchon' && (
         <Text style={styles.consejo}>
-          Consejo: mejor en una cuenta remunerada que parado sin más.
+          {EXPLICACION_ESTRATEGIA[bucket.strategy]}
+          {bucket.id === 'colchon' && ' Consejo: mejor en una cuenta remunerada que parado sin más.'}
         </Text>
       )}
 

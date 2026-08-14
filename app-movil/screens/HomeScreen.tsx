@@ -370,8 +370,12 @@ export function HomeScreen() {
               <Text style={styles.tituloReparto}>Ingreso de {mesActual()} organizado</Text>
             </View>
             <Text style={styles.subtituloReparto}>
-              Como en la vida real, el dinero llega una vez y se reparte una vez: podrás volver a
-              hacerlo el {primerDiaProximoMes()}.
+              {mesesUsados <= 1
+                ? // El motivo ("como en la vida real...") solo hace falta la
+                  // primera vez: a partir del segundo mes ya se sabe, y
+                  // repetirlo cada mes es ruido en vez de ayuda.
+                  `Como en la vida real, el dinero llega una vez y se reparte una vez: podrás volver a hacerlo el ${primerDiaProximoMes()}.`
+                : `Podrás volver a repartir el ${primerDiaProximoMes()}.`}
             </Text>
             {desgloseMesActual && (
               <View style={styles.desglose}>
