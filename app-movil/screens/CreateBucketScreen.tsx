@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -12,7 +12,7 @@ import { Colors, spacing, typography, useColors } from '../theme';
 
 type Props = {
   siguientePrioridad: number;
-  onCreado: () => void;
+  onCreado: (nombre: string) => void;
   onCancelar: () => void;
 };
 
@@ -68,9 +68,7 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
         initial_balance_cents: saldoCentimos,
         ...(strategy === 'FIXED' ? { fixed_amount_cents: centimos } : { target_cents: centimos }),
       });
-      Alert.alert('Bucket creado', `"${nombre.trim()}" ya está en tu lista.`, [
-        { text: 'OK', onPress: onCreado },
-      ]);
+      onCreado(nombre.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el bucket');
     } finally {

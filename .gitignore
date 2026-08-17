@@ -17,3 +17,9 @@ build/
 CLAUDE.md
 AGENTS.md
 .impeccable/
+.agents/
+skills-lock.json
+
+# Local, específico de esta máquina (remapea puertos para no chocar con
+# otros proyectos que ya usan 8000/5432 en el mismo Docker)
+docker-compose.override.yml

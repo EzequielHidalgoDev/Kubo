@@ -9,7 +9,7 @@ import { ClerkProvider, SignedIn, SignedOut } from '@clerk/clerk-expo';
 import { esES } from '@clerk/localizations';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen';
@@ -68,7 +68,10 @@ export default function App() {
   return (
     <ClerkProvider
       publishableKey={CLERK_PUBLISHABLE_KEY}
-      tokenCache={tokenCache}
+      // expo-secure-store (Keychain/Keystore) no existe en navegador: en web,
+      // Clerk guarda la sesión solo con sus propias cookies, sin necesitar
+      // este tokenCache — pasarlo igualmente rompería el login ahí.
+      tokenCache={Platform.OS === 'web' ? undefined : tokenCache}
       localization={esES}
     >
       <SafeAreaProvider>

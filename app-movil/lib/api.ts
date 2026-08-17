@@ -27,6 +27,12 @@ export async function apiFetch<T>(
   try {
     respuesta = await fetch(`${API_URL}${path}`, {
       ...options,
+      // Sin esto, iOS cachea peticiones GET a nivel de red (NSURLCache) al
+      // no venir el backend con cabeceras Cache-Control: tras editar/borrar
+      // un bucket, la siguiente carga de la lista podía devolver la versión
+      // de antes del cambio hasta que algo (cambiar de pestaña) forzaba una
+      // petición que sí saltaba la caché.
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

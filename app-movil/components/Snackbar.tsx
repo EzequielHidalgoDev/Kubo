@@ -1,18 +1,32 @@
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, radius, spacing, typography, useColors } from '../theme';
 
 type Props = {
   mensaje: string;
-  etiquetaAccion: string;
-  onAccion: () => void;
+  // Con acción (deshacer borrar/retirar): etiquetaAccion + onAccion, y quien
+  // llama controla cuándo desaparece. Sin acción (aviso de éxito simple, ej.
+  // "bucket creado"): se omiten y en su lugar se pasa duracionMs + onOcultar
+  // para que se cierre solo, como el resto de los Alert.alert que sustituye.
+  etiquetaAccion?: string;
+  onAccion?: () => void;
+  duracionMs?: number;
+  onOcultar?: () => void;
 };
 
-// Aviso flotante y temporal con una acción de deshacer, para acciones que
-// antes exigían un diálogo de confirmación previo: es más rápido para quien
-// no se equivoca, y sigue dando una salida real a quien sí lo hace.
-export function Snackbar({ mensaje, etiquetaAccion, onAccion }: Props) {
+// Aviso flotante y temporal, para acciones que antes exigían un diálogo de
+// confirmación previo (con acción de deshacer) o un Alert.alert nativo del
+// sistema (sin acción, solo aviso): en los dos casos es más discreto que
+// interrumpir con un modal, coherente con el resto de la interfaz.
+export function Snackbar({ mensaje, etiquetaAccion, onAccion, duracionMs, onOcultar }: Props) {
   const colors = useColors();
   const styles = getStyles(colors);
+
+  useEffect(() => {
+    if (!duracionMs || !onOcultar) return;
+    const id = setTimeout(onOcultar, duracionMs);
+    return () => clearTimeout(id);
+  }, [duracionMs, onOcultar]);
 
   return (
     <View
@@ -29,14 +43,16 @@ export function Snackbar({ mensaje, etiquetaAccion, onAccion }: Props) {
         <Text style={styles.mensaje} numberOfLines={2}>
           {mensaje}
         </Text>
-        <Pressable
-          onPress={onAccion}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={etiquetaAccion}
-        >
-          <Text style={styles.accion}>{etiquetaAccion}</Text>
-        </Pressable>
+        {etiquetaAccion && onAccion && (
+          <Pressable
+            onPress={onAccion}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={etiquetaAccion}
+          >
+            <Text style={styles.accion}>{etiquetaAccion}</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );

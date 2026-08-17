@@ -95,9 +95,20 @@ export function HomeScreen() {
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const [accionPendiente, setAccionPendiente] = useState<AccionPendiente | null>(null);
   const timeoutAccionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Avisos de éxito sin acción de deshacer (crear/editar bucket, onboarding
+  // completado, reparto hecho): antes eran Alert.alert nativos que exigían
+  // un toque para cerrarse; ahora son el mismo Snackbar discreto que ya se
+  // usaba para borrar/retirar, solo que se cierran solos.
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   // Evita que tocar dos veces seguidas una flecha de reordenar mande dos
   // intercambios de prioridad a la vez y los deje en un estado inconsistente.
   const [reordenando, setReordenando] = useState(false);
+  // Las flechas de reordenar solo aparecen dentro de este modo, no siempre:
+  // Kubo decide el orden de la cascada por ti (colchón antes que deuda,
+  // deuda antes que inversión...) y dejarlas visibles por defecto invita a
+  // tocarlas sin entender que se puede romper ese orden. Se activa a
+  // propósito, como una acción "avanzada", no como parte de mirar la lista.
+  const [ajustandoOrden, setAjustandoOrden] = useState(false);
 
   const [ingreso, setIngreso] = useState('');
   const [errorReparto, setErrorReparto] = useState('');
@@ -186,14 +197,17 @@ export function HomeScreen() {
       }
       await cargarBuckets();
     } catch (err) {
-      setError(
+      const mensaje =
         err instanceof Error
           ? err.message
           : accion.tipo === 'borrar'
           ? 'No se pudo borrar el bucket'
-          : 'No se pudo registrar el retiro'
-      );
+          : 'No se pudo registrar el retiro';
+      // cargarBuckets() empieza con setError(''): si se llamara antes, se
+      // comería este mensaje justo después de ponerlo, y el bucket
+      // reaparecería sin ninguna explicación de por qué falló el borrado.
       await cargarBuckets(); // deshace el cambio optimista si la API ha fallado
+      setError(mensaje);
     }
   }
 
@@ -234,7 +248,26 @@ export function HomeScreen() {
     cargarBuckets(); // nunca se llegó a llamar a la API: solo hay que refrescar
   }
 
+  // Un bucket a 0€ se borra directo (deshacer con el snackbar ya es red de
+  // sobra para ese caso). Uno con saldo real pide un toque de confirmación
+  // explícito antes: 7s de "Deshacer" no es suficiente aviso para borrar
+  // dinero de verdad ya ahorrado, aunque sí lo sea para un bucket vacío.
   function handleBorrar(bucket: Bucket) {
+    if (bucket.balance_cents > 0) {
+      Alert.alert(
+        `¿Borrar "${bucket.name}"?`,
+        `Tiene ${formatearCentimos(bucket.balance_cents)} ahorrados. Podrás deshacerlo justo después de borrarlo.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Borrar',
+            style: 'destructive',
+            onPress: () => iniciarAccionPendiente({ tipo: 'borrar', bucket }),
+          },
+        ]
+      );
+      return;
+    }
     iniciarAccionPendiente({ tipo: 'borrar', bucket });
   }
 
@@ -275,11 +308,10 @@ export function HomeScreen() {
       await cargarMesesUsados(); // trae el desglose recién hecho para mostrarlo abajo
       // Repartir es la acción que cumple la promesa central de Kubo (el
       // dinero se organiza solo, sin que tengas que revisar nada después):
-      // merece la misma confirmación explícita que ya tienen retirar y el
-      // alta de buckets en el onboarding, no solo un cambio de texto discreto.
-      Alert.alert('Repartido', 'Tu ingreso ya está organizado entre tus buckets.', [
-        { text: 'OK' },
-      ]);
+      // merece confirmación explícita, igual que retirar y el alta de
+      // buckets — pero como aviso discreto, no como modal que interrumpe el
+      // momento más importante de la app con el elemento menos de marca.
+      setMensajeExito('Repartido. Tu ingreso ya está organizado entre tus buckets.');
     } catch (err) {
       setErrorReparto(err instanceof Error ? err.message : 'No se pudo calcular el reparto');
     } finally {
@@ -291,9 +323,10 @@ export function HomeScreen() {
     return (
       <CreateBucketScreen
         siguientePrioridad={buckets.length + 1}
-        onCreado={() => {
+        onCreado={(nombre) => {
           setCreandoBucket(false);
           cargarBuckets();
+          setMensajeExito(`"${nombre}" ya está en tu lista.`);
         }}
         onCancelar={() => setCreandoBucket(false)}
       />
@@ -304,9 +337,10 @@ export function HomeScreen() {
     return (
       <EditBucketScreen
         bucket={editandoBucket}
-        onGuardado={() => {
+        onGuardado={(nombre) => {
           setEditandoBucket(null);
           cargarBuckets();
+          setMensajeExito(`"${nombre}" se ha actualizado.`);
         }}
         onCancelar={() => setEditandoBucket(null)}
       />
@@ -343,7 +377,14 @@ export function HomeScreen() {
     mesesUsados === 0 &&
     !error
   ) {
-    return <OnboardingScreen onListo={cargarBuckets} />;
+    return (
+      <OnboardingScreen
+        onListo={() => {
+          cargarBuckets();
+          setMensajeExito('Ya estás organizado. Tus buckets están listos.');
+        }}
+      />
+    );
   }
 
   // Dos grupos, no un destacado de color: "Este mes" son los importes que
@@ -511,7 +552,24 @@ export function HomeScreen() {
 
       {!cargando && !error && ahorroInversion.length > 0 && (
         <View style={styles.grupo}>
-          <Text style={styles.tituloGrupo}>Ahorro e inversión</Text>
+          <View style={styles.filaTitulo}>
+            <Text style={styles.tituloGrupo}>Ahorro e inversión</Text>
+            {/* Antes de esto, tocar una flecha durante el reordenar (dos
+                llamadas seguidas a la API) no daba ninguna señal: parecía
+                que el toque no había hecho nada mientras se esperaba red. */}
+            {reordenando ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : (
+              // Solo tiene sentido ofrecer "ajustar orden" si hay algo que
+              // reordenar: la tarjeta fusionada del colchón no cuenta.
+              ahorroInversion.filter((b) => b !== colchonFusionado).length > 1 && (
+                <LinkText
+                  label={ajustandoOrden ? 'Listo' : 'Ajustar orden'}
+                  onPress={() => setAjustandoOrden(!ajustandoOrden)}
+                />
+              )
+            )}
+          </View>
           {ahorroInversion.map((item, index) => {
             const anterior = ahorroInversion[index - 1];
             const siguiente = ahorroInversion[index + 1];
@@ -532,15 +590,23 @@ export function HomeScreen() {
                 onEditar={() => setEditandoBucket(item)}
                 onBorrar={() => handleBorrar(item)}
                 onRetirar={() => setRetirandoDeBucket(item)}
-                onSubir={puedeSubir && !reordenando ? () => handleReordenar(item, anterior) : undefined}
-                onBajar={puedeBajar && !reordenando ? () => handleReordenar(item, siguiente) : undefined}
+                onSubir={
+                  ajustandoOrden && puedeSubir && !reordenando
+                    ? () => handleReordenar(item, anterior)
+                    : undefined
+                }
+                onBajar={
+                  ajustandoOrden && puedeBajar && !reordenando
+                    ? () => handleReordenar(item, siguiente)
+                    : undefined
+                }
               />
             );
           })}
         </View>
       )}
     </Screen>
-    {accionPendiente && (
+    {accionPendiente ? (
       <Snackbar
         mensaje={
           accionPendiente.tipo === 'borrar'
@@ -550,6 +616,14 @@ export function HomeScreen() {
         etiquetaAccion="Deshacer"
         onAccion={deshacerAccionPendiente}
       />
+    ) : (
+      mensajeExito && (
+        <Snackbar
+          mensaje={mensajeExito}
+          duracionMs={3000}
+          onOcultar={() => setMensajeExito(null)}
+        />
+      )
     )}
     </>
   );

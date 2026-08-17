@@ -1,7 +1,8 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useRef, useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Button } from '../components/Button';
+import { LinkText } from '../components/LinkText';
 import { Screen } from '../components/Screen';
 import { TextField } from '../components/TextField';
 import { crearBucket, NuevoBucket } from '../lib/api';
@@ -17,10 +18,13 @@ export function OnboardingScreen({ onListo }: Props) {
   const { getToken } = useAuth();
   const colors = useColors();
   const styles = getStyles(colors);
-  // Dos pasos cortos en vez de 5 preguntas de golpe: menos que pensar a la
-  // vez en la pantalla que más le cuesta a alguien que "no sabe
-  // organizarse" (el público al que apunta Kubo).
-  const [paso, setPaso] = useState<1 | 2>(1);
+  // Cuatro pasos cortos, uno por decisión: el ingreso va solo porque el
+  // atajo 50/30/20 lo necesita para calcular algo (pedirlo en la misma
+  // pantalla que gastos fijos/libre dejaba el atajo sin usar hasta que se
+  // rellenaba el primer campo). Colchón y deuda también van cada uno en su
+  // propio paso: son dos decisiones financieras distintas y quien no sabe
+  // organizarse (el público al que apunta Kubo) no debería sopesarlas juntas.
+  const [paso, setPaso] = useState<1 | 2 | 3 | 4>(1);
   const [ingreso, setIngreso] = useState('');
   const [gastosFijos, setGastosFijos] = useState('');
   const [libre, setLibre] = useState('');
@@ -35,15 +39,40 @@ export function OnboardingScreen({ onListo }: Props) {
   // bucket que la primera pasada ya había creado.
   const creandoRef = useRef(false);
 
-  function handleContinuar() {
+  // Regla 50/30/20: punto de partida para quien no sabe qué números poner.
+  // Solo rellena gastos fijos (50%) y libre para gastar (30%): el 20%
+  // restante no se pone a mano en ningún sitio, sale solo del resto de la
+  // cascada (colchón, deuda, inversión) porque "Inversión" ya es REMAINDER
+  // y se lleva lo que sobra. Rellena los campos, no crea los buckets: se
+  // puede seguir ajustando a mano antes de continuar.
+  function aplicarRegla503020() {
+    const ingresoCents = parseEurosACentimos(ingreso);
+    if (ingresoCents === null || ingresoCents <= 0) {
+      setError('Introduce primero tu ingreso mensual');
+      return;
+    }
+    setError('');
+    const gastosSugeridosCents = Math.round(ingresoCents * 0.5);
+    const libreSugeridoCents = Math.round(ingresoCents * 0.3);
+    setGastosFijos(String(gastosSugeridosCents / 100).replace('.', ','));
+    setLibre(String(libreSugeridoCents / 100).replace('.', ','));
+  }
+
+  function handleContinuarIngreso() {
     setError('');
     const ingresoCents = parseEurosACentimos(ingreso);
-    const gastosCents = parseEurosACentimos(gastosFijos);
-    const libreCents = parseEurosACentimos(libre);
     if (ingresoCents === null || ingresoCents <= 0) {
       setError('Introduce tu ingreso mensual');
       return;
     }
+    setPaso(2);
+  }
+
+  function handleContinuarGastosLibre() {
+    setError('');
+    const ingresoCents = parseEurosACentimos(ingreso)!;
+    const gastosCents = parseEurosACentimos(gastosFijos);
+    const libreCents = parseEurosACentimos(libre);
     if (gastosCents === null || gastosCents < 0) {
       setError('Introduce tus gastos fijos mensuales');
       return;
@@ -53,10 +82,22 @@ export function OnboardingScreen({ onListo }: Props) {
       return;
     }
     if (gastosCents + libreCents >= ingresoCents) {
-      setError('Gastos fijos + libre para gastar no pueden ser iguales o más que tu ingreso');
+      setError(
+        'Con esos números no queda nada para colchón, deuda o inversión. Baja gastos fijos o libre para gastar.'
+      );
       return;
     }
-    setPaso(2);
+    setPaso(3);
+  }
+
+  function handleContinuarColchon() {
+    setError('');
+    const colchonCents = colchonAhorrado.trim() ? parseEurosACentimos(colchonAhorrado) : 0;
+    if (colchonCents === null || colchonCents < 0) {
+      setError('El colchón ya ahorrado no puede ser negativo');
+      return;
+    }
+    setPaso(4);
   }
 
   function handleCalcular() {
@@ -88,9 +129,7 @@ export function OnboardingScreen({ onListo }: Props) {
       for (const bucket of sugerencia) {
         await crearBucket(token, bucket);
       }
-      Alert.alert('Ya estás organizado', 'Tus buckets están listos. Cuando metas tu ingreso en "Repartir", se reparte solo.', [
-        { text: 'Entendido', onPress: onListo },
-      ]);
+      onListo();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudieron crear tus buckets, inténtalo de nuevo');
     } finally {
@@ -129,24 +168,23 @@ export function OnboardingScreen({ onListo }: Props) {
     );
   }
 
-  if (paso === 2) {
+  // El colchón (paso 3) y la deuda (paso 4) se calculan a partir de "gastos
+  // fijos", que quedó atrás en el paso 2: sin este resumen, decidir cuánto
+  // colchón o deuda declarar significa fiarse de memoria de un número que
+  // ya no se ve en pantalla.
+  const resumenGastosLibre = `Gastos fijos: ${formatearCentimos(
+    parseEurosACentimos(gastosFijos) ?? 0
+  )} · Libre para gastar: ${formatearCentimos(parseEurosACentimos(libre) ?? 0)}`;
+
+  if (paso === 4) {
     return (
       <Screen>
-        <Text style={styles.paso}>Paso 2 de 2</Text>
-        <Text style={styles.titulo}>Colchón y deuda</Text>
-        <Text style={styles.subtitulo}>Los dos son opcionales. Si no tienes, sigue adelante.</Text>
+        <Text style={styles.paso}>Paso 4 de 4</Text>
+        <Text style={styles.titulo}>¿Tienes deuda pendiente?</Text>
+        <Text style={styles.subtitulo}>{resumenGastosLibre}</Text>
 
         <TextField
-          label="¿Cuánto tienes ya ahorrado en tu colchón? (opcional)"
-          value={colchonAhorrado}
-          onChangeText={setColchonAhorrado}
-          keyboardType="decimal-pad"
-        />
-        <Text style={styles.ayuda}>
-          Si ya tienes algo apartado, cuéntanoslo. Así el resto empieza a invertirse ya.
-        </Text>
-        <TextField
-          label="¿Tienes deuda pendiente? (opcional)"
+          label="Deuda pendiente (opcional)"
           value={deuda}
           onChangeText={setDeuda}
           keyboardType="decimal-pad"
@@ -155,12 +193,83 @@ export function OnboardingScreen({ onListo }: Props) {
         />
         <Text style={styles.ayuda}>
           Tarjeta de crédito, préstamo... Si tienes, la ponemos por delante de la inversión: casi
-          ninguna inversión rinde más que el interés de una deuda.
+          ninguna inversión rinde más que el interés de una deuda. Si no tienes, sigue adelante.
         </Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Button label="Calcular mi reparto" onPress={handleCalcular} />
+        <Button label="Atrás" onPress={() => setPaso(3)} variant="secondary" />
+      </Screen>
+    );
+  }
+
+  if (paso === 3) {
+    return (
+      <Screen>
+        <Text style={styles.paso}>Paso 3 de 4</Text>
+        <Text style={styles.titulo}>¿Ya tienes colchón ahorrado?</Text>
+        <Text style={styles.subtitulo}>{resumenGastosLibre}</Text>
+
+        <TextField
+          label="Colchón ya ahorrado (opcional)"
+          value={colchonAhorrado}
+          onChangeText={setColchonAhorrado}
+          keyboardType="decimal-pad"
+          returnKeyType="go"
+          onSubmitEditing={handleContinuarColchon}
+        />
+        <Text style={styles.ayuda}>
+          Si ya tienes algo apartado, cuéntanoslo. Así el resto empieza a invertirse ya. Si no
+          tienes nada todavía, sigue adelante.
+        </Text>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Button label="Continuar" onPress={handleContinuarColchon} />
+        <Button label="Atrás" onPress={() => setPaso(2)} variant="secondary" />
+      </Screen>
+    );
+  }
+
+  if (paso === 2) {
+    const resumenIngreso = `Ingreso: ${formatearCentimos(parseEurosACentimos(ingreso) ?? 0)}`;
+    return (
+      <Screen>
+        <Text style={styles.paso}>Paso 2 de 4</Text>
+        <Text style={styles.titulo}>Gastos fijos y libre para gastar</Text>
+        <Text style={styles.subtitulo}>{resumenIngreso}</Text>
+
+        <LinkText label="Rellenar con la regla 50/30/20" onPress={aplicarRegla503020} />
+        <Text style={styles.ayuda}>
+          50% a gastos fijos, 30% a libre para gastar. El 20% restante no hace falta ponerlo:
+          va solo a colchón, deuda e inversión. Puedes ajustar los números después.
+        </Text>
+
+        <TextField
+          label="Gastos fijos mensuales (€)"
+          value={gastosFijos}
+          onChangeText={setGastosFijos}
+          keyboardType="decimal-pad"
+        />
+        <Text style={styles.ayuda}>
+          Todo lo que pagas sí o sí cada mes: alquiler, suscripciones, gimnasio, seguros...
+        </Text>
+        <TextField
+          label="¿Cuánto quieres tener libre para gastar al mes (€)?"
+          value={libre}
+          onChangeText={setLibre}
+          keyboardType="decimal-pad"
+          returnKeyType="go"
+          onSubmitEditing={handleContinuarGastosLibre}
+        />
+        <Text style={styles.ayuda}>
+          Salir, caprichos, ropa: lo que te gastas porque quieres. El resto se organiza solo.
+        </Text>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Button label="Continuar" onPress={handleContinuarGastosLibre} />
         <Button label="Atrás" onPress={() => setPaso(1)} variant="secondary" />
       </Screen>
     );
@@ -168,7 +277,7 @@ export function OnboardingScreen({ onListo }: Props) {
 
   return (
     <Screen>
-      <Text style={styles.paso}>Paso 1 de 2</Text>
+      <Text style={styles.paso}>Paso 1 de 4</Text>
       <Text style={styles.titulo}>Vamos a organizarte</Text>
       <Text style={styles.subtitulo}>Empecemos por lo esencial.</Text>
 
@@ -177,35 +286,17 @@ export function OnboardingScreen({ onListo }: Props) {
         value={ingreso}
         onChangeText={setIngreso}
         keyboardType="decimal-pad"
+        returnKeyType="go"
+        onSubmitEditing={handleContinuarIngreso}
       />
       <Text style={styles.ayuda}>
         Neto, lo que te llega de verdad a la cuenta. Si tienes más de una fuente (nómina,
         autónomo...), súmalas todas.
       </Text>
-      <TextField
-        label="Gastos fijos mensuales (€)"
-        value={gastosFijos}
-        onChangeText={setGastosFijos}
-        keyboardType="decimal-pad"
-      />
-      <Text style={styles.ayuda}>
-        Todo lo que pagas sí o sí cada mes: alquiler, suscripciones, gimnasio, seguros...
-      </Text>
-      <TextField
-        label="¿Cuánto quieres tener libre para gastar al mes (€)?"
-        value={libre}
-        onChangeText={setLibre}
-        keyboardType="decimal-pad"
-        returnKeyType="go"
-        onSubmitEditing={handleContinuar}
-      />
-      <Text style={styles.ayuda}>
-        Salir, caprichos, ropa: lo que te gastas porque quieres. El resto se organiza solo.
-      </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Button label="Continuar" onPress={handleContinuar} />
+      <Button label="Continuar" onPress={handleContinuarIngreso} />
     </Screen>
   );
 }
