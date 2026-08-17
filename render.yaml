@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: kubo-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /docs
+    envVars:
+      # Los valores reales de estas dos variables se cargan en el
+      # dashboard de Render (no van en este archivo, que sí se sube al
+      # repo): DATABASE_URL es la cadena de conexión de Neon, y
+      # CLERK_SECRET_KEY la clave secreta de Clerk.
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
