@@ -20,6 +20,13 @@
 #    ícono (apple-touch-icon) ni el modo standalone (sin la barra de
 #    Safari). Sin esto, quedaba un ícono genérico y se abría como una
 #    pestaña normal del navegador, no como una app.
+#
+# 4. Es una sola página (SPA): toda la navegación pasa por JavaScript
+#    en el propio index.html, no hay un archivo real por cada pantalla.
+#    Sin decirle a Vercel que sirva index.html para cualquier ruta que
+#    no reconozca como archivo, una recarga o una redirección de Clerk
+#    tras el login a una ruta interna (ej. /sso-callback) devolvía 404
+#    en vez de dejar que la app la resolviera del lado del cliente.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -32,6 +39,12 @@ fi
 
 cp assets/icon.png dist/apple-touch-icon.png
 sed -i 's#</head>#  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n  <meta name="apple-mobile-web-app-capable" content="yes">\n  <meta name="apple-mobile-web-app-title" content="Kubo">\n  <meta name="apple-mobile-web-app-status-bar-style" content="default">\n</head>#' dist/index.html
+
+cat > dist/vercel.json <<'JSON'
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+JSON
 
 mkdir -p web-deploy
 find web-deploy -mindepth 1 -not -name ".vercel" -not -path "web-deploy/.vercel/*" -delete
