@@ -20,7 +20,13 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Kubo",
+      "shortName": "Kubo",
+      "lang": "es",
+      "themeColor": "#01081D",
+      "backgroundColor": "#F8FAFC",
+      "display": "standalone"
     },
     "plugins": [
       "expo-secure-store",

@@ -3,15 +3,21 @@ import { Platform } from 'react-native';
 
 // Que la notificación se vea aunque la app esté abierta en primer plano:
 // sin esto, expo-notifications la descarta en silencio mientras usas Kubo.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Esto corre al cargar el módulo (no dentro de una función), así que el
+// guard de plataforma tiene que estar aquí también: expo-notifications no
+// implementa setNotificationHandler en web, y llamarlo ahí rompía la carga
+// de toda la app antes de que React pintara nada (pantalla en blanco).
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 const ID_RECORDATORIO = 'kubo-recordatorio-mensual';
 

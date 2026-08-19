@@ -1,9 +1,10 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BucketCard } from '../components/BucketCard';
 import { Button } from '../components/Button';
+import { CascadaConector } from '../components/CascadaConector';
 import { LinkText } from '../components/LinkText';
 import { Screen } from '../components/Screen';
 import { Snackbar } from '../components/Snackbar';
@@ -400,6 +401,36 @@ export function HomeScreen() {
   // así que no se le pasan acciones de editar/borrar/retirar.
   const colchonFusionado = ahorroInversion.find((b) => !buckets.includes(b)) ?? null;
 
+  // Cuánto le tocó de verdad a cada bucket este mes, para calcular cuánto
+  // queda disponible tras cada uno (ver CascadaConector). Solo existe si
+  // ya hay un reparto hecho este mes; si no, no hay cifras reales que
+  // mostrar todavía.
+  const mapaAsignaciones = new Map(
+    (desgloseMesActual?.allocations ?? []).map((a) => [a.bucket_id, a.amount_cents])
+  );
+  function importeAsignado(bucket: Bucket): number {
+    // El colchón fusionado no es un bucket real (ver comentario de arriba):
+    // su importe es la suma de los dos buckets reales que representa.
+    if (bucket.id === 'colchon' && !mapaAsignaciones.has('colchon')) {
+      return (mapaAsignaciones.get('colchon_minimo') ?? 0) + (mapaAsignaciones.get('colchon_resto') ?? 0);
+    }
+    return mapaAsignaciones.get(bucket.id) ?? 0;
+  }
+  // Restante tras cada tarjeta de "Ahorro e inversión", en el mismo orden
+  // en que se muestran: no pretende reproducir el orden exacto interno del
+  // motor (que intercala la deuda entre las dos mitades del colchón), solo
+  // "cuánto queda de tu ingreso después de todo lo que ves arriba de esta
+  // línea" — cierto para lo que la pantalla realmente enseña.
+  const restantesTrasCadaItem: (number | null)[] = [];
+  if (desgloseMesActual) {
+    let restante = desgloseMesActual.income_cents;
+    for (const b of esteMes) restante -= importeAsignado(b);
+    for (const item of ahorroInversion) {
+      restante -= importeAsignado(item);
+      restantesTrasCadaItem.push(restante);
+    }
+  }
+
   return (
     <>
     <Screen>
@@ -578,29 +609,41 @@ export function HomeScreen() {
             const puedeSubir = anterior && anterior !== colchonFusionado && item !== colchonFusionado;
             const puedeBajar = siguiente && siguiente !== colchonFusionado && item !== colchonFusionado;
 
+            // Entre esta tarjeta y la siguiente (no después de la última):
+            // cuánto queda del ingreso de este mes tras esta tarjeta, no
+            // solo un número de orden.
+            const conector = index < ahorroInversion.length - 1 && (
+              <CascadaConector restanteCents={restantesTrasCadaItem[index] ?? null} />
+            );
+
             return item === colchonFusionado ? (
               // Tarjeta fusionada, solo lectura: no corresponde a un único
               // bucket real, así que no tiene acciones de editar/borrar.
-              <BucketCard key={item.id} bucket={item} orden={index + 1} />
+              <Fragment key={item.id}>
+                <BucketCard bucket={item} orden={index + 1} />
+                {conector}
+              </Fragment>
             ) : (
-              <BucketCard
-                key={item.id}
-                bucket={item}
-                orden={index + 1}
-                onEditar={() => setEditandoBucket(item)}
-                onBorrar={() => handleBorrar(item)}
-                onRetirar={() => setRetirandoDeBucket(item)}
-                onSubir={
-                  ajustandoOrden && puedeSubir && !reordenando
-                    ? () => handleReordenar(item, anterior)
-                    : undefined
-                }
-                onBajar={
-                  ajustandoOrden && puedeBajar && !reordenando
-                    ? () => handleReordenar(item, siguiente)
-                    : undefined
-                }
-              />
+              <Fragment key={item.id}>
+                <BucketCard
+                  bucket={item}
+                  orden={index + 1}
+                  onEditar={() => setEditandoBucket(item)}
+                  onBorrar={() => handleBorrar(item)}
+                  onRetirar={() => setRetirandoDeBucket(item)}
+                  onSubir={
+                    ajustandoOrden && puedeSubir && !reordenando
+                      ? () => handleReordenar(item, anterior)
+                      : undefined
+                  }
+                  onBajar={
+                    ajustandoOrden && puedeBajar && !reordenando
+                      ? () => handleReordenar(item, siguiente)
+                      : undefined
+                  }
+                />
+                {conector}
+              </Fragment>
             );
           })}
         </View>
