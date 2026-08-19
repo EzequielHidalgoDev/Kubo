@@ -42,3 +42,9 @@ if [ ! -d "web-deploy/.vercel" ]; then
 fi
 
 (cd web-deploy && vercel deploy --prod --yes)
+
+# Vercel reasigna los alias existentes del proyecto en cada deploy de
+# producción, pero se reafirma aquí explícitamente por las dudas: es la
+# URL que se comparte fuera (LinkedIn, README), tiene que ser estable.
+vercel alias set dist-delta-sandy-54.vercel.app kubo-finanzas.vercel.app
+

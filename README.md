@@ -2,7 +2,7 @@
 
 App de gestión financiera personal automatizada. En vez de categorizar gastos a posteriori (tipo Fintonic), Kubo reparte el ingreso mensual entre "buckets" (cubos) siguiendo una cascada de prioridad fija, en el momento en que el dinero llega.
 
-**🔗 Pruébala:** [dist-delta-sandy-54.vercel.app](https://dist-delta-sandy-54.vercel.app) (versión web, funciona igual en desktop y móvil)
+**🔗 Pruébala:** [kubo-finanzas.vercel.app](https://kubo-finanzas.vercel.app) (versión web, funciona igual en desktop y móvil)
 
 <p align="center">
   <img src="docs/screenshots/inicio.jpeg" width="280" alt="Pantalla de inicio de Kubo: reparto del mes y buckets" />
