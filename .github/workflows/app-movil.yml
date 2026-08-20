@@ -22,7 +22,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Tiene que coincidir con la versión de Node usada en desarrollo:
+          # npm resuelve/valida el lockfile distinto entre versiones
+          # mayores, y con Node 20 "npm ci" fallaba con un lockfile que
+          # local (Node 24) instala sin problema.
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: app-movil/package-lock.json
 
