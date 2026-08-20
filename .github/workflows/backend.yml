@@ -16,6 +16,9 @@ on:
       - "alembic/**"
       - "tests/**"
       - "requirements.txt"
+  # Para poder correrlo a mano desde la pestaña Actions sin depender de
+  # que un push toque justo esas rutas.
+  workflow_dispatch:
 
 jobs:
   tests:
