@@ -1,0 +1,60 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "motor/**"
+      - "app/**"
+      - "alembic/**"
+      - "tests/**"
+      - "requirements.txt"
+  pull_request:
+    paths:
+      - "motor/**"
+      - "app/**"
+      - "alembic/**"
+      - "tests/**"
+      - "requirements.txt"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    # Los tests de app/ necesitan una Postgres real (tests/conftest.py
+    # crea las tablas y hace consultas de verdad, no usa mocks): un
+    # contenedor de servicio la levanta solo para el job, con las mismas
+    # credenciales que espera TEST_DATABASE_URL en conftest.py.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: kubo
+          POSTGRES_PASSWORD: kubo
+          POSTGRES_DB: kubo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Run tests
+        env:
+          # Solo hace falta que exista, la autenticación real de Clerk está
+          # sustituida en los tests (ver tests/conftest.py) y nunca se
+          # llama de verdad a la API de Clerk.
+          CLERK_SECRET_KEY: sk_test_ci_placeholder
+          DATABASE_URL: postgresql+psycopg://kubo:kubo@localhost:5432/kubo_test
+        run: python -m pytest -v

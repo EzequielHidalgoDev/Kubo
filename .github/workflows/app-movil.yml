@@ -1,0 +1,31 @@
+name: App móvil
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app-movil/**"
+  pull_request:
+    paths:
+      - "app-movil/**"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app-movil
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: app-movil/package-lock.json
+
+      - run: npm ci
+
+      - name: Comprobar tipos de TypeScript
+        run: npx tsc --noEmit -p .
