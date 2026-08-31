@@ -142,7 +142,7 @@ export function BucketCard({
             accessibilityLabel="Qué significa esta estrategia"
             accessibilityState={{ expanded: explicacionAbierta }}
           >
-            <Text style={styles.detalle}>
+            <Text style={styles.detalle} numberOfLines={1} ellipsizeMode="tail">
               {bucket.strategy === 'FIXED'
                 ? `Importe fijo: ${formatearCentimos(objetivo)}`
                 : bucket.strategy === 'DEBT'
@@ -277,19 +277,30 @@ function getStyles(colors: Colors) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      gap: spacing.sm,
     },
     acciones: {
       flexDirection: 'row',
       gap: spacing.md,
+      // Los links de acción nunca se cortan: si algo tiene que ceder
+      // espacio, es el texto de detalle de al lado (ver filaDetalle).
+      flexShrink: 0,
     },
     filaDetalle: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
+      // Sin esto, un detalle largo (objetivo + tope mensual) empujaba los
+      // links de Retirar/Editar/Borrar fuera de la tarjeta en vez de
+      // truncarse con "...".
+      flexShrink: 1,
+      minWidth: 0,
     },
     detalle: {
       ...typography.caption,
       color: colors.textSecondary,
+      flexShrink: 1,
+      minWidth: 0,
     },
     consejo: {
       ...typography.caption,
