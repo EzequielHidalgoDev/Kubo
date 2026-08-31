@@ -77,7 +77,11 @@ function construirCambiosConPrioridad(bucket: Bucket, priority: number): Cambios
     return { ...base, fixed_amount_cents: bucket.fixed_amount_cents ?? undefined };
   }
   if (bucket.strategy === 'FILL_TO_TARGET' || bucket.strategy === 'DEBT') {
-    return { ...base, target_cents: bucket.target_cents ?? undefined };
+    return {
+      ...base,
+      target_cents: bucket.target_cents ?? undefined,
+      monthly_cap_cents: bucket.monthly_cap_cents ?? undefined,
+    };
   }
   return base; // REMAINDER: sin importe fijo ni objetivo
 }

@@ -12,6 +12,9 @@ class BucketCreate(BaseModel):
     priority: int
     target_cents: int | None = None
     fixed_amount_cents: int | None = None
+    # Solo aplica a FILL_TO_TARGET/DEBT: cuánto puede recibir como mucho en
+    # un mes, aunque le falte más para el objetivo (ver motor/models.py).
+    monthly_cap_cents: int | None = None
     # Dinero que ya tenías ahorrado antes de usar Kubo, para que el bucket
     # no arranque en 0€ si en la vida real ya tenía algo dentro.
     initial_balance_cents: int | None = None
@@ -26,6 +29,7 @@ class BucketUpdate(BaseModel):
     priority: int
     target_cents: int | None = None
     fixed_amount_cents: int | None = None
+    monthly_cap_cents: int | None = None
 
 
 class BucketRead(BaseModel):
@@ -37,6 +41,7 @@ class BucketRead(BaseModel):
     priority: int
     target_cents: int | None
     fixed_amount_cents: int | None
+    monthly_cap_cents: int | None
     balance_cents: int  # suma de ledger_entries para este bucket; no viene de BucketModel
 
     # Permite crear un BucketRead directamente a partir de un BucketModel

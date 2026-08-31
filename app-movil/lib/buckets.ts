@@ -17,6 +17,9 @@ export function fusionarColchon(buckets: Bucket[]): Bucket[] {
     priority: minimo.priority,
     target_cents: (minimo.target_cents ?? 0) + (resto.target_cents ?? 0),
     fixed_amount_cents: null,
+    // El colchón mínimo/resto no llevan tope mensual propio hoy; la tarjeta
+    // fusionada no representa a un bucket real de todos modos.
+    monthly_cap_cents: null,
     balance_cents: minimo.balance_cents + resto.balance_cents,
   };
 

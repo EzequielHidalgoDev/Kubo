@@ -27,6 +27,9 @@ export function EditBucketScreen({ bucket, onGuardado, onCancelar }: Props) {
   const [importe, setImporte] = useState(
     importeActual != null ? String(importeActual / 100).replace('.', ',') : ''
   );
+  const [topeMensual, setTopeMensual] = useState(
+    bucket.monthly_cap_cents != null ? String(bucket.monthly_cap_cents / 100).replace('.', ',') : ''
+  );
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
@@ -48,6 +51,13 @@ export function EditBucketScreen({ bucket, onGuardado, onCancelar }: Props) {
       return;
     }
 
+    const topeMensualCentimos =
+      strategy !== 'FIXED' && topeMensual.trim() ? parseEurosACentimos(topeMensual) : null;
+    if (topeMensual.trim() && (topeMensualCentimos === null || topeMensualCentimos <= 0)) {
+      setError('El tope mensual no es válido');
+      return;
+    }
+
     setCargando(true);
     try {
       const token = await getToken();
@@ -56,6 +66,7 @@ export function EditBucketScreen({ bucket, onGuardado, onCancelar }: Props) {
         strategy,
         priority: bucket.priority,
         ...(strategy === 'FIXED' ? { fixed_amount_cents: centimos } : { target_cents: centimos }),
+        ...(topeMensualCentimos ? { monthly_cap_cents: topeMensualCentimos } : {}),
       });
       onGuardado(nombre.trim());
     } catch (err) {
@@ -87,9 +98,26 @@ export function EditBucketScreen({ bucket, onGuardado, onCancelar }: Props) {
         onChangeText={setImporte}
         keyboardType="decimal-pad"
         error={error || undefined}
-        returnKeyType="go"
-        onSubmitEditing={handleGuardar}
+        returnKeyType={strategy === 'FIXED' ? 'go' : 'next'}
+        onSubmitEditing={strategy === 'FIXED' ? handleGuardar : undefined}
       />
+
+      {strategy !== 'FIXED' && (
+        <>
+          <TextField
+            label="Tope al mes (opcional)"
+            value={topeMensual}
+            onChangeText={setTopeMensual}
+            keyboardType="decimal-pad"
+            returnKeyType="go"
+            onSubmitEditing={handleGuardar}
+          />
+          <Text style={styles.ayuda}>
+            Como mucho recibe esto cada mes, aunque el ingreso dé para más. Vacío significa sin
+            tope.
+          </Text>
+        </>
+      )}
 
       <Button label="Guardar cambios" onPress={handleGuardar} loading={cargando} />
       <Button label="Cancelar" onPress={onCancelar} variant="secondary" />
@@ -103,6 +131,11 @@ function getStyles(colors: Colors) {
       ...typography.title,
       color: colors.textPrimary,
       marginTop: spacing.md,
+    },
+    ayuda: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginTop: -spacing.xs,
     },
   });
 }

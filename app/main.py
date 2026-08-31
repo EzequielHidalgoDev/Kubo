@@ -87,6 +87,7 @@ def to_bucket_read(
         priority=bucket.priority,
         target_cents=bucket.target_cents,
         fixed_amount_cents=bucket.fixed_amount_cents,
+        monthly_cap_cents=bucket.monthly_cap_cents,
         balance_cents=saldo.get(bucket.id, 0),
     )
 
@@ -103,6 +104,7 @@ def get_buckets_motor(db: Session, user_id: str) -> list[Bucket]:
             priority=b.priority,
             target_cents=b.target_cents,
             fixed_amount_cents=b.fixed_amount_cents,
+            monthly_cap_cents=b.monthly_cap_cents,
         )
         for b in bucket_models
     ]
@@ -194,6 +196,7 @@ def crear_bucket(
             priority=bucket.priority,
             target_cents=bucket.target_cents,
             fixed_amount_cents=bucket.fixed_amount_cents,
+            monthly_cap_cents=bucket.monthly_cap_cents,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -274,6 +277,7 @@ def editar_bucket(
             priority=datos.priority,
             target_cents=datos.target_cents,
             fixed_amount_cents=datos.fixed_amount_cents,
+            monthly_cap_cents=datos.monthly_cap_cents,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -283,6 +287,7 @@ def editar_bucket(
     bucket.priority = datos.priority
     bucket.target_cents = datos.target_cents
     bucket.fixed_amount_cents = datos.fixed_amount_cents
+    bucket.monthly_cap_cents = datos.monthly_cap_cents
     db.commit()
     db.refresh(bucket)
 

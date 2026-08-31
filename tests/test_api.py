@@ -485,3 +485,66 @@ def test_retirar_de_bucket_de_deuda_devuelve_400(client):
 
     respuesta = client.post("/buckets/deuda/retirar", json={"amount_cents": 1000})
     assert respuesta.status_code == 400
+
+
+def test_crear_bucket_con_monthly_cap_lo_respeta_al_repartir(client):
+    # Caso real: reserva de IRPF con tope de 300€/mes aunque el ingreso
+    # alcance para cubrir el objetivo entero de una vez.
+    client.post(
+        "/buckets",
+        json={
+            "id": "irpf",
+            "name": "Reserva IRPF",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 150000,
+            "monthly_cap_cents": 30000,
+        },
+    )
+
+    respuesta = client.post("/allocate", json={"income_cents": 250000})
+    datos = respuesta.json()
+    irpf = next(a for a in datos["allocations"] if a["bucket_id"] == "irpf")
+    assert irpf["amount_cents"] == 30000  # el tope, no los 150000 que caben
+    assert irpf["reached_target"] is False
+
+
+def test_crear_bucket_monthly_cap_en_fixed_devuelve_400(client):
+    respuesta = client.post(
+        "/buckets",
+        json={
+            "id": "gastos_fijos",
+            "name": "Gastos fijos",
+            "strategy": "FIXED",
+            "priority": 1,
+            "fixed_amount_cents": 90000,
+            "monthly_cap_cents": 30000,
+        },
+    )
+    assert respuesta.status_code == 400
+
+
+def test_editar_bucket_para_añadir_monthly_cap(client):
+    client.post(
+        "/buckets",
+        json={
+            "id": "irpf",
+            "name": "Reserva IRPF",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 150000,
+        },
+    )
+
+    respuesta = client.put(
+        "/buckets/irpf",
+        json={
+            "name": "Reserva IRPF",
+            "strategy": "FILL_TO_TARGET",
+            "priority": 1,
+            "target_cents": 150000,
+            "monthly_cap_cents": 30000,
+        },
+    )
+    assert respuesta.status_code == 200
+    assert respuesta.json()["monthly_cap_cents"] == 30000

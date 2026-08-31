@@ -24,6 +24,7 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
   const [strategy, setStrategy] = useState<'FIXED' | 'FILL_TO_TARGET' | 'DEBT'>('FIXED');
   const [importe, setImporte] = useState('');
   const [saldoInicial, setSaldoInicial] = useState('');
+  const [topeMensual, setTopeMensual] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
@@ -56,6 +57,15 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
       setError('El saldo inicial no es válido');
       return;
     }
+    // El tope mensual también es opcional, y solo tiene sentido fuera de
+    // "Importe fijo" (ver motor/models.py: monthly_cap_cents solo aplica a
+    // FILL_TO_TARGET/DEBT).
+    const topeMensualCentimos =
+      strategy !== 'FIXED' && topeMensual.trim() ? parseEurosACentimos(topeMensual) : null;
+    if (topeMensual.trim() && (topeMensualCentimos === null || topeMensualCentimos <= 0)) {
+      setError('El tope mensual no es válido');
+      return;
+    }
 
     setCargando(true);
     try {
@@ -67,6 +77,7 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
         priority: siguientePrioridad,
         initial_balance_cents: saldoCentimos,
         ...(strategy === 'FIXED' ? { fixed_amount_cents: centimos } : { target_cents: centimos }),
+        ...(topeMensualCentimos ? { monthly_cap_cents: topeMensualCentimos } : {}),
       });
       onCreado(nombre.trim());
     } catch (err) {
@@ -112,9 +123,26 @@ export function CreateBucketScreen({ siguientePrioridad, onCreado, onCancelar }:
         value={saldoInicial}
         onChangeText={setSaldoInicial}
         keyboardType="decimal-pad"
-        returnKeyType="go"
-        onSubmitEditing={handleCrear}
+        returnKeyType={strategy === 'FIXED' ? 'go' : 'next'}
+        onSubmitEditing={strategy === 'FIXED' ? handleCrear : undefined}
       />
+
+      {strategy !== 'FIXED' && (
+        <>
+          <TextField
+            label="Tope al mes (opcional)"
+            value={topeMensual}
+            onChangeText={setTopeMensual}
+            keyboardType="decimal-pad"
+            returnKeyType="go"
+            onSubmitEditing={handleCrear}
+          />
+          <Text style={styles.ayuda}>
+            Como mucho recibe esto cada mes, aunque el ingreso dé para más. Sin tope, se lleva
+            todo lo que le falte de golpe en cuanto haya dinero suficiente.
+          </Text>
+        </>
+      )}
 
       <Button label="Crear bucket" onPress={handleCrear} loading={cargando} />
       <Button label="Cancelar" onPress={onCancelar} variant="secondary" />

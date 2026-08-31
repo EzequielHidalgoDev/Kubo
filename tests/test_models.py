@@ -50,3 +50,40 @@ def test_bucket_fill_to_target_sin_objetivo_falla():
             priority=2,
             target_cents=0,
         )
+
+
+def test_bucket_monthly_cap_en_fixed_falla():
+    # monthly_cap_cents solo tiene sentido en FILL_TO_TARGET/DEBT.
+    with pytest.raises(ValueError):
+        Bucket(
+            id="gastos_fijos",
+            name="Gastos fijos",
+            strategy=BucketStrategy.FIXED,
+            priority=1,
+            fixed_amount_cents=90000,
+            monthly_cap_cents=30000,
+        )
+
+
+def test_bucket_monthly_cap_cero_falla():
+    with pytest.raises(ValueError):
+        Bucket(
+            id="irpf",
+            name="Reserva IRPF",
+            strategy=BucketStrategy.FILL_TO_TARGET,
+            priority=1,
+            target_cents=150000,
+            monthly_cap_cents=0,
+        )
+
+
+def test_bucket_monthly_cap_valido():
+    bucket = Bucket(
+        id="irpf",
+        name="Reserva IRPF",
+        strategy=BucketStrategy.FILL_TO_TARGET,
+        priority=1,
+        target_cents=150000,
+        monthly_cap_cents=30000,
+    )
+    assert bucket.monthly_cap_cents == 30000

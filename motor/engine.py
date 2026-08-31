@@ -17,7 +17,10 @@ def _demanda(bucket: Bucket, current_balances: dict[str, int], remaining: int) -
         # demanda es el resto hasta saldarla, igual que un ahorro hasta
         # su objetivo.
         balance_actual = current_balances.get(bucket.id, 0)
-        return max(bucket.target_cents - balance_actual, 0)
+        falta = max(bucket.target_cents - balance_actual, 0)
+        if bucket.monthly_cap_cents is not None:
+            return min(falta, bucket.monthly_cap_cents)
+        return falta
     return remaining  # REMAINDER: se lleva todo lo que quede
 
 

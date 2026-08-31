@@ -65,6 +65,10 @@ export type Bucket = {
   priority: number;
   target_cents: number | null;
   fixed_amount_cents: number | null;
+  // Solo aplica a FILL_TO_TARGET/DEBT: cuánto puede recibir como mucho en
+  // un mes, aunque le falte más para el objetivo (ej. una reserva de
+  // impuestos que no debe comerse el sueldo entero de una vez).
+  monthly_cap_cents: number | null;
   balance_cents: number;
 };
 
@@ -79,6 +83,7 @@ export type NuevoBucket = {
   priority: number;
   target_cents?: number;
   fixed_amount_cents?: number;
+  monthly_cap_cents?: number;
   initial_balance_cents?: number;
 };
 
@@ -95,6 +100,7 @@ export type CambiosBucket = {
   priority: number;
   target_cents?: number;
   fixed_amount_cents?: number;
+  monthly_cap_cents?: number;
 };
 
 export function editarBucket(token: string | null, id: string, datos: CambiosBucket) {

@@ -22,6 +22,13 @@ class Bucket:
     priority: int  # orden en la cascada: 1 se reparte antes que 2
     target_cents: int | None = None  # solo aplica si strategy es FILL_TO_TARGET
     fixed_amount_cents: int | None = None  # solo aplica si strategy es FIXED
+    # Solo aplica a FILL_TO_TARGET/DEBT: cuánto puede pedir como mucho EN UN
+    # MES, aunque le falte más para llegar al objetivo. Sin esto, un bucket
+    # con un objetivo grande y prioridad alta puede llevarse de golpe todo
+    # el ingreso disponible ese mes (ej. "ahorrar 1.500€ para el IRPF" se
+    # comería el sueldo entero del primer mes en vez de repartirse en
+    # varios). None significa "sin tope", pide todo lo que le falte.
+    monthly_cap_cents: int | None = None
 
     def __post_init__(self) -> None:
         # Validamos que cada estrategia tenga el dato que necesita para funcionar.
@@ -33,6 +40,14 @@ class Bucket:
             raise ValueError(
                 f"Bucket '{self.id}': {self.strategy.value} requiere target_cents > 0"
             )
+        if self.monthly_cap_cents is not None:
+            if self.strategy not in (BucketStrategy.FILL_TO_TARGET, BucketStrategy.DEBT):
+                raise ValueError(
+                    f"Bucket '{self.id}': monthly_cap_cents solo aplica a "
+                    "FILL_TO_TARGET o DEBT"
+                )
+            if self.monthly_cap_cents <= 0:
+                raise ValueError(f"Bucket '{self.id}': monthly_cap_cents debe ser > 0")
 
 
 @dataclass(frozen=True)

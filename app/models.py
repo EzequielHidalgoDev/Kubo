@@ -21,6 +21,7 @@ class BucketModel(Base):
     priority: Mapped[int] = mapped_column(Integer, nullable=False)
     target_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     fixed_amount_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    monthly_cap_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class LedgerEntryModel(Base):

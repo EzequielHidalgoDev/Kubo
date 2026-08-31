@@ -223,3 +223,40 @@ def test_deuda_antes_que_resto_del_colchon_y_que_inversion():
     assert por_bucket["deuda"] == 30000
     assert por_bucket["colchon_resto"] == 0
     assert por_bucket["inversion"] == 0
+
+
+def test_monthly_cap_limita_lo_que_pide_un_bucket_aunque_haya_de_sobra():
+    # Caso real: reserva de 1.500€ para el IRPF, tope de 300€/mes para no
+    # comerse el sueldo entero de golpe aunque el ingreso dé para más.
+    irpf = Bucket(
+        id="irpf", name="Reserva IRPF", strategy=BucketStrategy.FILL_TO_TARGET,
+        priority=1, target_cents=150000, monthly_cap_cents=30000,
+    )
+    inversion = Bucket(
+        id="inversion", name="Inversión", strategy=BucketStrategy.REMAINDER, priority=2,
+    )
+
+    # Ingreso de sobra para cubrir los 1.500€ enteros este mismo mes, pero
+    # el tope lo frena en 300€.
+    resultado = allocate(income_cents=250000, buckets=[irpf, inversion], current_balances={})
+    por_bucket = {x.bucket_id: x.amount_cents for x in resultado.allocations}
+
+    assert por_bucket["irpf"] == 30000  # el tope, no los 150000 que le faltarían
+    assert por_bucket["inversion"] == 220000  # el resto pasa al siguiente bucket
+    assert resultado.unallocated_cents == 0
+
+
+def test_monthly_cap_no_limita_si_ya_falta_menos_que_el_tope():
+    # A 30€ de completar el objetivo: aunque el tope sea de 300€, no pide
+    # más de lo que realmente le falta.
+    irpf = Bucket(
+        id="irpf", name="Reserva IRPF", strategy=BucketStrategy.FILL_TO_TARGET,
+        priority=1, target_cents=150000, monthly_cap_cents=30000,
+    )
+    resultado = allocate(
+        income_cents=100000, buckets=[irpf], current_balances={"irpf": 147000}
+    )
+
+    irpf_allocation = resultado.allocations[0]
+    assert irpf_allocation.amount_cents == 3000  # solo lo que faltaba
+    assert irpf_allocation.reached_target is True

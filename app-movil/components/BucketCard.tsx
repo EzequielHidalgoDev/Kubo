@@ -148,6 +148,8 @@ export function BucketCard({
                 : bucket.strategy === 'DEBT'
                 ? `Deuda total: ${formatearCentimos(objetivo)}`
                 : `Objetivo: ${formatearCentimos(objetivo)}`}
+              {bucket.monthly_cap_cents != null &&
+                ` · tope ${formatearCentimos(bucket.monthly_cap_cents)}/mes`}
             </Text>
             <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
           </Pressable>
