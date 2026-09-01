@@ -28,6 +28,13 @@ type Props = {
   orden?: number;
   onSubir?: () => void;
   onBajar?: () => void;
+  // Solo para REMAINDER (Inversión) en Inicio: sin objetivo ni barra de
+  // progreso que le den contexto, el saldo acumulado de siempre ahí se
+  // confundía con "lo que toca invertir este mes". Cuando se pasa este
+  // valor, sustituye al saldo acumulado en la cabecera; el acumulado real
+  // sigue intacto en Historial (no toca bucket.balance_cents en ningún
+  // sitio, solo cambia lo que se muestra aquí).
+  importeEsteMes?: number;
 };
 
 export function BucketCard({
@@ -38,6 +45,7 @@ export function BucketCard({
   orden,
   onSubir,
   onBajar,
+  importeEsteMes,
 }: Props) {
   const colors = useColors();
   const styles = getStyles(colors);
@@ -122,7 +130,7 @@ export function BucketCard({
           </Text>
         </View>
         <Text style={styles.saldo} numberOfLines={1}>
-          {formatearCentimos(bucket.balance_cents)}
+          {formatearCentimos(importeEsteMes ?? bucket.balance_cents)}
         </Text>
       </View>
 
@@ -153,6 +161,11 @@ export function BucketCard({
             </Text>
             <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
           </Pressable>
+        ) : importeEsteMes != null ? (
+          // Sin esto, "Inversión" mostraba un número grande sin ninguna
+          // etiqueta al lado: parecía el acumulado de siempre (como en
+          // Colchón), no lo asignado solo este mes.
+          <Text style={styles.detalle}>Este mes</Text>
         ) : (
           <View />
         )}

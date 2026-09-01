@@ -663,6 +663,7 @@ export function HomeScreen() {
                       ? () => handleReordenar(item, siguiente)
                       : undefined
                   }
+                  importeEsteMes={item.strategy === 'REMAINDER' ? importeAsignado(item) : undefined}
                 />
                 {conector}
               </Fragment>
