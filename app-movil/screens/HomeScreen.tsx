@@ -31,12 +31,16 @@ import { EditBucketScreen } from './EditBucketScreen';
 import { OnboardingScreen } from './OnboardingScreen';
 import { RetirarScreen } from './RetirarScreen';
 
-// El backend ordena por prioridad de reparto, pero "Libre para gastar"
-// comparte prioridad con "Gastos fijos" (los dos van garantizados) y aun
-// así queremos que se muestre el último en la lista, como premio tras
-// cubrir lo importante. Los buckets que no son de la lista base mantienen
-// su orden por prioridad, como antes.
-const ORDEN_VISUAL: Record<string, number> = {
+// Solo para DESEMPATAR cuando dos buckets comparten la misma prioridad de
+// reparto: "Libre para gastar" comparte prioridad con "Gastos fijos" (los
+// dos van garantizados) y aun así queremos que se muestre el último, como
+// premio tras cubrir lo importante. No es el criterio de orden principal:
+// eso siempre es la prioridad real (ver ordenarParaMostrar), para que
+// "Ajustar orden" se refleje en pantalla también en buckets nombrados
+// aquí (antes "inversion" quedaba pegada al puesto 4 pase lo que pase,
+// aunque su prioridad real cambiara al reordenar un bucket nuevo por
+// delante).
+const DESEMPATE_MISMA_PRIORIDAD: Record<string, number> = {
   gastos_fijos: 0,
   colchon: 1, // colchón único (sin deuda) y colchón mínimo (con deuda) van en el mismo hueco
   colchon_minimo: 1,
@@ -63,9 +67,14 @@ const DURACION_DESHACER_MS = 7000;
 
 function ordenarParaMostrar(buckets: Bucket[]): Bucket[] {
   return [...buckets].sort((a, b) => {
-    const ordenA = ORDEN_VISUAL[a.id] ?? a.priority + 10;
-    const ordenB = ORDEN_VISUAL[b.id] ?? b.priority + 10;
-    return ordenA - ordenB;
+    // La prioridad real manda siempre primero: es lo que "Ajustar orden"
+    // cambia de verdad en el backend, y tiene que verse reflejado en
+    // pantalla para cualquier bucket, no solo para los que no están en el
+    // mapa de desempate.
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    const desempateA = DESEMPATE_MISMA_PRIORIDAD[a.id] ?? 0;
+    const desempateB = DESEMPATE_MISMA_PRIORIDAD[b.id] ?? 0;
+    return desempateA - desempateB;
   });
 }
 
@@ -197,6 +206,9 @@ export function HomeScreen() {
       const token = await getToken();
       if (accion.tipo === 'borrar') {
         await borrarBucket(token, accion.bucket.id);
+        // Borrar recalcula el reparto de este mes en el backend; retirar
+        // no (solo resta saldo acumulado, no toca la cascada de este mes).
+        await cargarMesesUsados();
       } else {
         await retirarDeBucket(token, accion.bucket.id, accion.centimos);
       }
@@ -287,6 +299,10 @@ export function HomeScreen() {
       await editarBucket(token, bucket.id, construirCambiosConPrioridad(bucket, otro.priority));
       await editarBucket(token, otro.id, construirCambiosConPrioridad(otro, bucket.priority));
       await cargarBuckets();
+      // Reordenar recalcula el reparto de este mes en el backend (mismo
+      // motivo que editar un bucket): sin esto, el desglose seguía
+      // mostrando las cifras de antes de mover el bucket.
+      await cargarMesesUsados();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el orden');
     } finally {
@@ -331,6 +347,7 @@ export function HomeScreen() {
         onCreado={(nombre) => {
           setCreandoBucket(false);
           cargarBuckets();
+          cargarMesesUsados(); // crear un bucket también recalcula el reparto de este mes
           setMensajeExito(`"${nombre}" ya está en tu lista.`);
         }}
         onCancelar={() => setCreandoBucket(false)}
@@ -345,6 +362,7 @@ export function HomeScreen() {
         onGuardado={(nombre) => {
           setEditandoBucket(null);
           cargarBuckets();
+          cargarMesesUsados(); // editar recalcula el reparto de este mes
           setMensajeExito(`"${nombre}" se ha actualizado.`);
         }}
         onCancelar={() => setEditandoBucket(null)}
