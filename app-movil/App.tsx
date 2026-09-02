@@ -5,10 +5,10 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { ClerkProvider, SignedIn, SignedOut } from '@clerk/clerk-expo';
+import { ClerkProvider, SignedIn, SignedOut, useSignIn, useSignUp } from '@clerk/clerk-expo';
 import { esES } from '@clerk/localizations';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -28,6 +28,40 @@ type Pantalla = 'login' | 'registro' | 'olvide-password';
 
 function AuthGate() {
   const [pantalla, setPantalla] = useState<Pantalla>('login');
+  const { signIn, isLoaded: signInCargado } = useSignIn();
+  const { signUp, setActive, isLoaded: signUpCargado } = useSignUp();
+
+  // Solo en web: la redirección completa de Google vuelve aquí sin que
+  // nada más la termine de procesar (en nativo, useSSO() hace todo esto
+  // internamente; en web no hay equivalente automático sin el componente
+  // <AuthenticateWithRedirectCallback />, que clerk-expo no expone). Dos
+  // casos posibles al volver:
+  // - Cuenta nueva: el intento de inicio de sesión queda "transferable"
+  //   (existe la cuenta de Google, pero ningún usuario de Kubo con ese
+  //   email todavía) y hay que crearla explícitamente con transfer:true.
+  // - Cuenta ya existente: el inicio de sesión queda "complete" pero la
+  //   sesión no se activa sola, hay que activarla a mano.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !signInCargado || !signUpCargado) return;
+
+    if (signIn.status === 'complete' && signIn.createdSessionId) {
+      setActive({ session: signIn.createdSessionId }).catch(() => {});
+      return;
+    }
+    if (signIn.firstFactorVerification?.status !== 'transferable') return;
+
+    signUp
+      .create({ transfer: true })
+      .then((resultado) => {
+        if (resultado.createdSessionId) {
+          return setActive({ session: resultado.createdSessionId });
+        }
+      })
+      .catch(() => {
+        // Si falla, la persona sigue viendo la pantalla de login normal
+        // y puede reintentar tocando "Continuar con Google" de nuevo.
+      });
+  }, [signInCargado, signUpCargado]);
 
   return (
     <>
