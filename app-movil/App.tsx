@@ -44,17 +44,26 @@ function AuthGate() {
   useEffect(() => {
     if (Platform.OS !== 'web' || !signInCargado || !signUpCargado) return;
 
-    if (signIn.status === 'complete' && signIn.createdSessionId) {
-      setActive({ session: signIn.createdSessionId }).catch(() => {});
-      return;
-    }
-    if (signIn.firstFactorVerification?.status !== 'transferable') return;
+    // Clerk no se entera solo de que Google ya terminó: hace falta pasarle
+    // el "rotating_token_nonce" que vuelve en la URL para que recargue el
+    // intento de inicio de sesión con el resultado real (mismo paso que
+    // useSSO() hace en nativo, ver signIn.reload en su código). Sin esto,
+    // signIn se quedaba con el estado de antes de ir a Google.
+    const nonce = new URLSearchParams(window.location.search).get('rotating_token_nonce');
+    if (!nonce) return;
 
-    signUp
-      .create({ transfer: true })
-      .then((resultado) => {
-        if (resultado.createdSessionId) {
-          return setActive({ session: resultado.createdSessionId });
+    signIn
+      .reload({ rotatingTokenNonce: nonce })
+      .then(() => {
+        if (signIn.status === 'complete' && signIn.createdSessionId) {
+          return setActive({ session: signIn.createdSessionId });
+        }
+        if (signIn.firstFactorVerification?.status === 'transferable') {
+          return signUp.create({ transfer: true }).then((resultado) => {
+            if (resultado.createdSessionId) {
+              return setActive({ session: resultado.createdSessionId });
+            }
+          });
         }
       })
       .catch(() => {
