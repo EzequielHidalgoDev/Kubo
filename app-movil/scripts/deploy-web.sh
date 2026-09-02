@@ -27,6 +27,15 @@
 #    no reconozca como archivo, una recarga o una redirección de Clerk
 #    tras el login a una ruta interna (ej. /sso-callback) devolvía 404
 #    en vez de dejar que la app la resolviera del lado del cliente.
+#
+# 5. index.html referencia el bundle JS por nombre con hash (cambia en
+#    cada build), pero el propio index.html no llevaba ninguna cabecera
+#    que impidiera cachearlo: un navegador (sobre todo en móvil, con
+#    cachés más agresivas) podía quedarse con una versión vieja del
+#    HTML apuntando a un bundle JS ya viejo, sin enterarse nunca de que
+#    hay una versión nueva. no-store fuerza a pedirlo fresco siempre;
+#    los archivos con hash en el nombre sí pueden cachearse para siempre,
+#    porque su propio nombre cambia si cambia el contenido.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -42,7 +51,17 @@ sed -i 's#</head>#  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n
 
 cat > dist/vercel.json <<'JSON'
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
+  ]
 }
 JSON
 
