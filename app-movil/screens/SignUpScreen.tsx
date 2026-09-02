@@ -1,4 +1,5 @@
 import { useSignUp, useSSO } from '@clerk/clerk-expo';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { AuthHero } from '../components/AuthHero';
@@ -31,8 +32,11 @@ export function SignUpScreen({ onVolverALogin }: Props) {
   async function handleGoogle() {
     setCargandoGoogle(true);
     try {
+      // Ver comentario equivalente en SignInScreen.tsx: sin redirectUrl,
+      // el flujo de Google en web no sabía volver al propio sitio.
       const { createdSessionId, setActive: activarSesion } = await startSSOFlow({
         strategy: 'oauth_google',
+        redirectUrl: makeRedirectUri(),
       });
       if (createdSessionId && activarSesion) {
         await activarSesion({ session: createdSessionId });

@@ -1,4 +1,5 @@
 import { useSignIn, useSSO } from '@clerk/clerk-expo';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useState } from 'react';
 import { AuthHero } from '../components/AuthHero';
 import { Button } from '../components/Button';
@@ -52,8 +53,15 @@ export function SignInScreen({ onIrARegistro, onOlvideContrasena }: Props) {
   async function handleGoogle() {
     setCargandoGoogle(true);
     try {
+      // Sin esto, Google no sabía a dónde volver tras autenticar: en la
+      // app nativa se resuelve solo con el esquema "kubo://" de app.json,
+      // pero en web hacía falta decirle explícitamente que vuelva al
+      // propio sitio, o el círculo no se cerraba y devolvía al login sin
+      // crear la sesión. makeRedirectUri() resuelve lo correcto en cada
+      // plataforma.
       const { createdSessionId, setActive: activarSesion } = await startSSOFlow({
         strategy: 'oauth_google',
+        redirectUrl: makeRedirectUri(),
       });
       if (createdSessionId && activarSesion) {
         await activarSesion({ session: createdSessionId });
