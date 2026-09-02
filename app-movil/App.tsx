@@ -5,7 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { ClerkProvider, SignedIn, SignedOut, useSignIn, useSignUp } from '@clerk/clerk-expo';
+import { ClerkProvider, SignedIn, SignedOut, useClerk } from '@clerk/clerk-expo';
 import { esES } from '@clerk/localizations';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -28,49 +28,25 @@ type Pantalla = 'login' | 'registro' | 'olvide-password';
 
 function AuthGate() {
   const [pantalla, setPantalla] = useState<Pantalla>('login');
-  const { signIn, isLoaded: signInCargado } = useSignIn();
-  const { signUp, setActive, isLoaded: signUpCargado } = useSignUp();
+  const clerk = useClerk();
 
   // Solo en web: la redirección completa de Google vuelve aquí sin que
   // nada más la termine de procesar (en nativo, useSSO() hace todo esto
   // internamente; en web no hay equivalente automático sin el componente
-  // <AuthenticateWithRedirectCallback />, que clerk-expo no expone). Dos
-  // casos posibles al volver:
-  // - Cuenta nueva: el intento de inicio de sesión queda "transferable"
-  //   (existe la cuenta de Google, pero ningún usuario de Kubo con ese
-  //   email todavía) y hay que crearla explícitamente con transfer:true.
-  // - Cuenta ya existente: el inicio de sesión queda "complete" pero la
-  //   sesión no se activa sola, hay que activarla a mano.
+  // <AuthenticateWithRedirectCallback />, que clerk-expo no expone).
+  // handleRedirectCallback es el método real que usa ese componente por
+  // dentro: lee el resultado de la URL, crea la cuenta si hace falta
+  // (cuenta de Google nueva) o activa la sesión si ya existía, todo en un
+  // único paso ya resuelto por Clerk en vez de reimplementarlo a mano.
   useEffect(() => {
-    if (Platform.OS !== 'web' || !signInCargado || !signUpCargado) return;
+    if (Platform.OS !== 'web' || !clerk.loaded) return;
+    if (!new URLSearchParams(window.location.search).has('rotating_token_nonce')) return;
 
-    // Clerk no se entera solo de que Google ya terminó: hace falta pasarle
-    // el "rotating_token_nonce" que vuelve en la URL para que recargue el
-    // intento de inicio de sesión con el resultado real (mismo paso que
-    // useSSO() hace en nativo, ver signIn.reload en su código). Sin esto,
-    // signIn se quedaba con el estado de antes de ir a Google.
-    const nonce = new URLSearchParams(window.location.search).get('rotating_token_nonce');
-    if (!nonce) return;
-
-    signIn
-      .reload({ rotatingTokenNonce: nonce })
-      .then(() => {
-        if (signIn.status === 'complete' && signIn.createdSessionId) {
-          return setActive({ session: signIn.createdSessionId });
-        }
-        if (signIn.firstFactorVerification?.status === 'transferable') {
-          return signUp.create({ transfer: true }).then((resultado) => {
-            if (resultado.createdSessionId) {
-              return setActive({ session: resultado.createdSessionId });
-            }
-          });
-        }
-      })
-      .catch(() => {
-        // Si falla, la persona sigue viendo la pantalla de login normal
-        // y puede reintentar tocando "Continuar con Google" de nuevo.
-      });
-  }, [signInCargado, signUpCargado]);
+    clerk.handleRedirectCallback({}).catch(() => {
+      // Si falla, la persona sigue viendo la pantalla de login normal
+      // y puede reintentar tocando "Continuar con Google" de nuevo.
+    });
+  }, [clerk.loaded]);
 
   return (
     <>
