@@ -1,6 +1,7 @@
 import { useSignIn, useSSO } from '@clerk/clerk-expo';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { AuthHero } from '../components/AuthHero';
 import { Button } from '../components/Button';
 import { Divider } from '../components/Divider';
@@ -53,12 +54,21 @@ export function SignInScreen({ onIrARegistro, onOlvideContrasena }: Props) {
   async function handleGoogle() {
     setCargandoGoogle(true);
     try {
-      // Sin esto, Google no sabía a dónde volver tras autenticar: en la
-      // app nativa se resuelve solo con el esquema "kubo://" de app.json,
-      // pero en web hacía falta decirle explícitamente que vuelva al
-      // propio sitio, o el círculo no se cerraba y devolvía al login sin
-      // crear la sesión. makeRedirectUri() resuelve lo correcto en cada
-      // plataforma.
+      // En web, useSSO() abre un popup (window.open) después de un await:
+      // los navegadores lo bloquean por no considerarlo ya una respuesta
+      // directa al clic, y no pasaba absolutamente nada, ni un error. En
+      // vez de un popup, authenticateWithRedirect navega la página entera
+      // a Google y vuelve; nunca lo bloquean. En nativo, useSSO() sigue
+      // funcionando bien (ahí sí abre un navegador de verdad), así que
+      // solo se usa la redirección completa en web.
+      if (Platform.OS === 'web' && isLoaded) {
+        await signIn.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl: window.location.href,
+          redirectUrlComplete: window.location.href,
+        });
+        return; // la página navega fuera; no queda nada más que hacer aquí
+      }
       const { createdSessionId, setActive: activarSesion } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl: makeRedirectUri(),
